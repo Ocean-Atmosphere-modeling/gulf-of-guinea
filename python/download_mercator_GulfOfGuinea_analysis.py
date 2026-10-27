@@ -32,20 +32,14 @@ ids=['cmems_mod_glo_phy-so_anfc_0.083deg_P1D-m',
      'cmems_mod_glo_phy_anfc_0.083deg_P1D-m']
 
 # SET THE TIME RANGE FOR DOWNLOAD
-#ays=1
-#in a real time system you don't want to type in individual dates manually so use this
-tstart=date.today()-timedelta(days=5) #data
-tend=date.today()+timedelta(days=7) #forecast
 
+#Set time window for the run
+ndays_back = 5   # days of past data (analysis/real-time archive)
+ndays_fwd  = 7   # days of forecast
 
-#use this when the user wants to specify a fixed date range manually, otherwise comment out
-# tstart=datetime(2026, 2, 1)
-# tend=datetime(2026,2,29)
+tstart = date.today() - timedelta(days=ndays_back)
+tend   = date.today() + timedelta(days=ndays_fwd)
 
-
-# tend=tstart+timedelta(days=2)
-#start=date.today()-timedelta(days=0)
-#end=date.today()+timedelta(days=3)
 
 days=pd.date_range(tstart,tend)
 
