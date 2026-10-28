@@ -34,8 +34,8 @@ ids=['cmems_mod_glo_phy-so_anfc_0.083deg_P1D-m',
 # SET THE TIME RANGE FOR DOWNLOAD
 
 #Set time window for the run
-ndays_back = 5   # days of past data (analysis/real-time archive)
-ndays_fwd  = 7   # days of forecast
+ndays_back = 7   # days of past data (analysis/real-time archive)
+ndays_fwd  = 0   # days of forecast
 
 tstart = date.today() - timedelta(days=ndays_back)
 tend   = date.today() + timedelta(days=ndays_fwd)

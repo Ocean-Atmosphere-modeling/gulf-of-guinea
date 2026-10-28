@@ -81,8 +81,8 @@ bdylist={'EAST':False, 'WEST':True, 'NORTH':True, 'SOUTH':True}
 #bdylist={'SOUTH':True}
 
 #Set time window for the run
-ndays_back = 5   # days of past data (real-time archive)
-ndays_fwd  = 7   # days of forecast
+ndays_back = 7   # days of past data (real-time archive)
+ndays_fwd  = 0   # days of forecast
  
 start_date = date.today() - timedelta(days=ndays_back) #data
 tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
