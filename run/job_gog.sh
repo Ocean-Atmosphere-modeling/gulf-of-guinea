@@ -6,9 +6,9 @@
 #SBATCH --partition=p_omg_1               # Partition (job queue) for Ocean Modeling Group
 #SBATCH --requeue                         # Return job to the queue if preempted
 #SBATCH --job-name=gog_test           # Assign a short name to your job
-#SBATCH --nodes=2                         # Number of nodes you require
+#SBATCH --nodes=1                         # Number of nodes you require
 
-#SBATCH --ntasks=128                      # Total number of tasks to launch (like -np to mpirun)
+#SBATCH --ntasks=64                      # Total number of tasks to launch (like -np to mpirun)
 #SBATCH --ntasks-per-node=64              # Number of tasks to launch on each node
 
 #SBATCH --cpus-per-task=1                 # Cores per task (>1 if multithread tasks)

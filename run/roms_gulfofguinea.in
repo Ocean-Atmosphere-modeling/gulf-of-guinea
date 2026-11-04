@@ -106,8 +106,8 @@ GridsInLayer =  1
 ! shared-memory configurations used to determine tile horizontal range
 ! indices (Istr,Iend) and (Jstr,Jend), [1:Ngrids].
 
-      NtileI == 4                               ! I-direction partition
-      NtileJ == 2                               ! J-direction partition
+      NtileI == 8                               ! I-direction partition
+      NtileJ == 8                               ! J-direction partition
 
 ! Set horizontal and vertical advection schemes for active and inert
 ! tracers. A different advection scheme is allowed for each tracer.
@@ -1187,7 +1187,7 @@ PIO_I2C_Preq = 65                 ! Maximum pending I2C requests
 
 ! Input Sources/Sinks forcing (like river runoff) file name.
 
-     SSFNAME == ../inp/riv_gulfofguinea_2024.nc
+     SSFNAME == /projects/f_omg_1/moa/africa/inp/riv/riv_gulfofguinea_20261001_20261031_v2.nc
 
 ! Input tidal forcing file name.
 
