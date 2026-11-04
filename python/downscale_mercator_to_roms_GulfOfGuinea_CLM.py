@@ -56,22 +56,30 @@ pc = cartopy.crs.PlateCarree()
 
 #Set time
 
-reftime=datetime.datetime(2024,1,1)
+reftime=datetime.datetime(2026,1,1)
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
 
 # number of days to process - creates a new file for each day
-nday=5
-start_date = datetime.datetime(2024, 9, 17)
-start_date = datetime.datetime(2025, 8, 10)
-start_date = datetime.datetime(2026, 3, 1)
-sdate=start_date.strftime('%Y%m%d')
-date_times = [start_date  + timedelta(days=i) for i in range(nday)]
+#Set time window for the run
+ndays_back = 7   # days of past data (real-time archive)
+ndays_fwd  = 0   # days of forecast
+ 
+start_date = date.today() - timedelta(days=ndays_back) #data
+tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
+ 
+sdate      = start_date.strftime('%Y%m%d')
+date_times = pd.date_range(start_date,tend)   # inclusive of both ends
 #Donor grid Info
 
 #Donor inputfiles
-datadir='/Users/wilkin/Dropbox/_roms-db/coessing/mercator/downloads/'
-regrid_coef_file='regrid_mercator_clm.nc'
+datadir='/projects/f_omg_1/moa/africa/data/downloads/'
+
+# Output directory (boundary file and regridding weights are written here)
+outdir='/projects/f_omg_1/moa/africa/data/clm/'   # <-- set to your path
+os.makedirs(outdir, exist_ok=True)
+
+regrid_coef_file=os.path.join(outdir,'regrid_mercator_clm.nc')
 
 # Receiver Output file << this is now set inside the day loop
 #lmfile=f'clm_gulfofguinea_Mercator_{sdate}.nc'
@@ -79,7 +87,7 @@ regrid_coef_file='regrid_mercator_clm.nc'
 # Output/receiver ROMS Grid 
 
 # roms gridfile 
-L1grdfile='../../grid/GulfOfGuinea_4km.nc'
+L1grdfile='/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
 
 # roms s-coordinate parameters
 L1theta_s=7.0
@@ -107,6 +115,14 @@ def main():
     print('Initializing grids and regridder')
     ########################################################################
     
+ # Fail early with a clear message if any daily file (past or forecast) is missing
+    filelist=[day.strftime(datadir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc') for day in date_times]
+    missing=[f for f in filelist if not os.path.exists(f)]
+    if missing:
+        raise FileNotFoundError(f'Missing Mercator files: {missing}')
+
+
+
     #Getting the mercator grid information
     day=date_times[0]
     #filename = day.strftime(datadir+'mercator_GulfOfGuinea_RA_%Y_%m_%d.nc')
@@ -138,7 +154,8 @@ def main():
         if INIflag:
             start_time=time.time()
 
-            inifile=day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc')
+            # inifile=day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc')
+            inifile=os.path.join(outdir,day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc'))
             print(' Output will be to inifile')
             print(' '+inifile)
 
