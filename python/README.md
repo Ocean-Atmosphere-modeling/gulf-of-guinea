@@ -1,7 +1,7 @@
 # Gulf of Guinea ROMS pre-processing from Copernicus Marine (Mercator)
 
 Scripts that download daily Mercator (Copernicus Marine, `GLOBAL_ANALYSISFORECAST_PHY_001_024`) ocean fields
-and regrid them onto a ROMS grid to produce:
+and regrid them onto a ROMS grid (`grd_GulfOfGuinea_4km.nc`) to produce:
 
 | Output | Script | File(s) written |
 |---|---|---|
