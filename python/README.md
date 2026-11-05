@@ -19,7 +19,7 @@ The driver sets it for all of them at once.
 
 ---
 
-## 1. Quick start
+## *Quick start*
 
 ```bash
 # 1. create the python environment (section 3)
@@ -50,7 +50,7 @@ The steps run in order (download, bry, clm, ini) and the driver stops at the fir
 
 ---
 
-## 2. What you need before you start
+## 1. What you need before you start
 
 1. A **Copernicus Marine account** (free, section 4).
 2. A **ROMS grid NetCDF file** for your domain (standard ROMS grid with `lon_rho`, `lat_rho`, `mask_rho`, `h`,
@@ -62,7 +62,7 @@ The steps run in order (download, bry, clm, ini) and the driver stops at the fir
 
 ---
 
-## 3. Python environment and dependencies
+## 2. Python environment and dependencies
 
 A conda environment from `conda-forge` is strongly recommended, because `xesmf` depends on `esmpy`, which is
 difficult to install with pip. `Homebrew` (https://brew.sh/) can also be used to install esmpy if conda or pip are causing issues. 
@@ -106,7 +106,7 @@ If you want the driver to activate the environment for you (for example under cr
 
 ---
 
-## 4. Copernicus Marine account and login
+## 3. Copernicus Marine account and login
 
 Only one external account is needed.
 
@@ -146,9 +146,9 @@ the download fails.
 
 ---
 
-## 5. What to change for a new computer or domain
+## 4. What to change for a new computer or domain
 
-### 5.1 Directories
+### 4.1 Directories
 
 Every script has hard-coded paths. Change these to match your machine.
 
@@ -199,7 +199,7 @@ L1grdfile = os.path.join(root, 'imp_files', 'grd_GulfOfGuinea_4km.nc')
 
 and then `export GOG_DATA_ROOT=/your/path` before running.
 
-### 5.2 Time window (edit once, then use the driver)
+### 4.2 Time window (edit once, then use the driver)
 
 The driver passes the window through the environment variables `NDAYS_BACK` and `NDAYS_FWD`. In **each of the four python
 scripts**, replace the two hard-coded lines with:
@@ -215,7 +215,7 @@ Running a script directly without the driver uses the defaults in these lines.
 Every script computes its dates from `date.today()`. Do not start a run just before midnight, or the download and
 the later steps could use different days.
 
-### 5.3 ROMS grid and vertical coordinate (must match your model)
+### 4.3 ROMS grid and vertical coordinate (must match your model)
 
 In the BRY, CLM and INI scripts, set these to the values used in your ROMS configuration (`.in` file):
 
@@ -232,7 +232,7 @@ L1hc          = 250
 If these differ from your model, the files will load but the vertical levels will be wrong. Keep them identical in all
 three scripts.
 
-### 5.4 Reference time (must be identical everywhere)
+### 4.4 Reference time (must be identical everywhere)
 
 ```python
 reftime = datetime.datetime(2026,1,1)   # "days since 2026-01-01"
@@ -241,7 +241,7 @@ reftime = datetime.datetime(2026,1,1)   # "days since 2026-01-01"
 This sets the time units written into the BRY, CLM and INI files. It must be **the same in all three scripts and
 consistent with the time reference in your ROMS input**. The usual choice is January 1st of the forecast year.
 
-### 5.5 Domain: the Mercator download box must cover your ROMS grid
+### 4.5 Domain: the Mercator download box must cover your ROMS grid
 
 In the download script:
 
@@ -258,7 +258,7 @@ from the nearest points.
 The `latmin/latmax/lonmin/lonmax` values at the top of the BRY script are only used by the optional plotting helper
 functions, which are not called in normal runs. You can leave them.
 
-### 5.6 Open boundaries (BRY script only)
+### 4.6 Open boundaries (BRY script only)
 
 ```python
 bdylist = {'EAST': False, 'WEST': True, 'NORTH': True, 'SOUTH': True}
@@ -267,7 +267,7 @@ bdylist = {'EAST': False, 'WEST': True, 'NORTH': True, 'SOUTH': True}
 Set `True` for each side of your grid that is an open ocean boundary and `False` for closed (land) sides.
 It must agree with the open boundary settings in your ROMS configuration.
 
-### 5.7 Other things you might change
+### 4.7 Other things you might change
 
 - **Product / dataset IDs** and the output file name pattern `mercator_GulfOfGuinea_RT_%Y_%m_%d.nc`. If you rename
   the pattern, change it in the download script **and** in all three ROMS scripts.
@@ -276,7 +276,7 @@ It must agree with the open boundary settings in your ROMS configuration.
 
 ---
 
-## 6. What the scripts do
+## 5. What the scripts do
 
 1. **Download.** For each day in the window, downloads salinity, temperature, currents and sea surface height
    separately with `copernicusmarine.subset`, merges them with `ncks -A` into one daily file, and copies it to `outdir`.
@@ -298,7 +298,7 @@ weights will be used silently.
 
 ---
 
-## 7. Outputs and using them in ROMS
+## 6. Outputs and using them in ROMS
 
 Point your ROMS input file at the generated files, for example:
 
@@ -312,7 +312,7 @@ ININAME == .../ini/ini_gulfofguinea_Mercator_YYYYMMDD.nc
 
 ---
 
-## 8. Running automatically (cron example)
+## 7. Running automatically (cron example)
 
 ```cron
 # every day at 02:00 - 7 days back, 2 days forward
@@ -325,7 +325,7 @@ to the cron user.
 
 ---
 
-## 9. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
@@ -340,7 +340,7 @@ to the cron user.
 
 ---
 
-## 10. Known issues to fix before first use
+## 9. Known issues to fix before first use
 
 These come from reading the current versions of the scripts. Remove this section once they are fixed.
 
@@ -355,7 +355,7 @@ These come from reading the current versions of the scripts. Remove this section
 
 ## Credits
 
-Originally created by Elias Hunter (Rutgers), adapted by John Wilkin (2025, 2026) and Becca Horwitz (2026).
+Originally created by Elias Hunter (Rutgers), adapted by John Wilkin (2025, 2026) and Becca Horwitz, Cody Benton and Sean Divine (2026).
 Mercator data are provided by the E.U. Copernicus Marine Service. Please follow their citation and data-use
 requirements.
 
