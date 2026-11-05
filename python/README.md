@@ -54,11 +54,9 @@ The steps run in order (download, bry, clm, ini) and the driver stops at the fir
 
 1. A **Copernicus Marine account** (free, section 4).
 2. A **ROMS grid NetCDF file** for your domain (standard ROMS grid with `lon_rho`, `lat_rho`, `mask_rho`, `h`,
-   `pm`, `pn`, `angle`).
-3. **`romsutil.py`**, the in-house ROMS helper module imported as `import romsutil as rutil`. It is **not on
-   PyPI** and is not installed by the commands below. It provides `stretching`, `create_bdry_file`,
-   `create_init_file` and `uv_rot`. Put it in this folder or somewhere on `PYTHONPATH`.
-   *(Add the source or a link for this module here before publishing.)*
+   `pm`, `pn`, `angle`) such as `grd_GulfOfGuinea_4km.nc`
+3. **`romsutil.py`**, the in-house ROMS helper module imported as `import romsutil as rutil`. Included in this repository,
+   `create_init_file` and `uv_rot`. 
 4. The **s-coordinate settings of your ROMS configuration** (section 5.3), so the output matches your model.
 5. Disk space for the daily downloads and output files. Size depends on your domain.
 
@@ -67,7 +65,7 @@ The steps run in order (download, bry, clm, ini) and the driver stops at the fir
 ## 3. Python environment and dependencies
 
 A conda environment from `conda-forge` is strongly recommended, because `xesmf` depends on `esmpy`, which is
-difficult to install with pip.
+difficult to install with pip. `Homebrew` (https://brew.sh/) can also be used to install esmpy if conda or pip are causing issues. 
 
 ```bash
 conda create -n gog-roms -c conda-forge python=3.11 \
