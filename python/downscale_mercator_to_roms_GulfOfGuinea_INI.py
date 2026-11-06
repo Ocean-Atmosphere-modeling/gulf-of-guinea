@@ -40,18 +40,21 @@ pc = cartopy.crs.PlateCarree()
 #tart_date = datetime.datetime(2025,8,10) # COESSING August 2025
 # start_date = datetime.datetime(2026,,1) # Oceans26 
 
-reftime=datetime.datetime(2024,1,1)
+reftime=datetime.datetime(2026,1,1)   # same reference as the BRY, CLM and river files
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
 
-# number of days to process - creates a new file for each day
 #Set time window for the run
-ndays_back = 7   # days of past data (real-time archive)
-ndays_fwd  = 0   # days of forecast
- 
-start_date = date.today() - timedelta(days=ndays_back) #data
-tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
- 
+#ndays_back = 7   # days of past data (real-time archive)
+#ndays_fwd  = 0   # days of forecast
+#start_date = date.today() - timedelta(days=ndays_back) #data
+#tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
+
+# Initial conditions for the October 2026 run: ONE day only (the run start).
+# Every day in the window is written to the same inifile, so keep start = end.
+start_date = date(2026,10,1)
+tend       = date(2026,10,1)
+
 sdate      = start_date.strftime('%Y%m%d')
 date_times = pd.date_range(start_date,tend)   # inclusive of both ends
 #Donor grid Info
@@ -60,11 +63,14 @@ date_times = pd.date_range(start_date,tend)   # inclusive of both ends
 # Mercator donor input files
 datadir=datadir='/projects/f_omg_1/moa/africa/data/downloads/'
 
-# Output directory (initial conditions file and regridding weights are written here)
-outdir='/projects/f_omg_1/moa/africa/data/ini/'   # <-- set to your path
+# Output directory for the initial conditions file
+outdir='/projects/f_omg_1/moa/africa/inp/ini/'   # <-- set to your path
 os.makedirs(outdir, exist_ok=True)
 
-regrid_coef_file=os.path.join(outdir,'regrid_mercator_ini.nc')
+# Regridding weights kept in data/ini (created on the first run, reused after)
+weightdir='/projects/f_omg_1/moa/africa/data/ini/'
+os.makedirs(weightdir, exist_ok=True)
+regrid_coef_file=os.path.join(weightdir,'regrid_mercator_ini.nc')
 
 
 # Receiver Output file - named with the start date, same as the BRY file
@@ -144,7 +150,7 @@ def main():
             start_time=time.time()
             print(' Output will be to inifile')
             print(' '+inifile)
-            downscale_init_file(cfgrd,dsmerc)
+            downscale_init_file(cfgrd,dsmerc,inifile)
             end_time=time.time()
             elapsed_time = end_time - start_time
             print(f"Initilization file processing time: {elapsed_time} seconds")

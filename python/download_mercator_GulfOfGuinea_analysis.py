@@ -34,11 +34,15 @@ ids=['cmems_mod_glo_phy-so_anfc_0.083deg_P1D-m',
 # SET THE TIME RANGE FOR DOWNLOAD
 
 #Set time window for the run
-ndays_back = 7   # days of past data (analysis/real-time archive)
-ndays_fwd  = 0   # days of forecast
+#ndays_back = 7   # days of past data (analysis/real-time archive)
+#ndays_fwd  = 0   # days of forecast
+#tstart = date.today() - timedelta(days=ndays_back)
+#tend   = date.today() + timedelta(days=ndays_fwd)
 
-tstart = date.today() - timedelta(days=ndays_back)
-tend   = date.today() + timedelta(days=ndays_fwd)
+# Fixed window: October 2026 run (end one day past Oct 31 so the BRY file
+# covers the last day of the run)
+tstart = date(2026,10,1)
+tend   = date(2026,11,1)
 
 
 days=pd.date_range(tstart,tend)
@@ -49,6 +53,10 @@ def main(argv):
     print('MAIN')
     for day in days:
         print(day)
+
+        if os.path.exists(day.strftime(outdir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc')):
+            print('  already downloaded, skipping')
+            continue
 
         for f in glob.glob(tmpdir+'TMP*.nc'):
             os.remove(f)

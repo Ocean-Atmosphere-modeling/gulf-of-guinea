@@ -62,12 +62,15 @@ rtime=np.datetime64(reftime.date())
 
 # number of days to process - creates a new file for each day
 #Set time window for the run
-ndays_back = 7   # days of past data (real-time archive)
-ndays_fwd  = 0   # days of forecast
- 
-start_date = date.today() - timedelta(days=ndays_back) #data
-tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
- 
+#ndays_back = 7   # days of past data (real-time archive)
+#ndays_fwd  = 0   # days of forecast
+#start_date = date.today() - timedelta(days=ndays_back) #data
+#tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
+
+# Fixed window: October 2026 run (must match the download script)
+start_date = date(2026,10,1)
+tend       = date(2026,11,1)
+
 sdate      = start_date.strftime('%Y%m%d')
 date_times = pd.date_range(start_date,tend)   # inclusive of both ends
 #Donor grid Info
@@ -75,11 +78,14 @@ date_times = pd.date_range(start_date,tend)   # inclusive of both ends
 #Donor inputfiles
 datadir='/projects/f_omg_1/moa/africa/data/downloads/'
 
-# Output directory (boundary file and regridding weights are written here)
-outdir='/projects/f_omg_1/moa/africa/data/clm/'   # <-- set to your path
+# Output directory for the daily climatology files
+outdir='/projects/f_omg_1/moa/africa/inp/clm/'   # <-- set to your path
 os.makedirs(outdir, exist_ok=True)
 
-regrid_coef_file=os.path.join(outdir,'regrid_mercator_clm.nc')
+# Regridding weights kept in data/clm so the existing weights for this grid are reused
+weightdir='/projects/f_omg_1/moa/africa/data/clm/'
+os.makedirs(weightdir, exist_ok=True)
+regrid_coef_file=os.path.join(weightdir,'regrid_mercator_clm.nc')
 
 # Receiver Output file << this is now set inside the day loop
 #lmfile=f'clm_gulfofguinea_Mercator_{sdate}.nc'
@@ -135,8 +141,12 @@ def main():
     
     
     for day in date_times:
-        
+
         print(' ')
+        # Skip days whose CLM file already exists (e.g. after a crash/restart)
+        if os.path.exists(os.path.join(outdir,day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc'))):
+            print(day.strftime(' CLM file for %Y-%m-%d already exists, skipping'))
+            continue
         #filename = day.strftime(datadir+'mercator_GulfOfGuinea_RA_%Y_%m_%d.nc')
         mfilename = day.strftime(datadir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc')
         print('Reading input data from ...')

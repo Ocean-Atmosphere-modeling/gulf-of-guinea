@@ -50,12 +50,15 @@ datadir='/projects/f_omg_1/moa/africa/data/downloads/'
 
 
 
-# Output directory (boundary file and regridding weights are written here)
-outdir='/projects/f_omg_1/moa/africa/data/bry/'   # <-- set to your path
+# Output directory for the boundary file
+outdir='/projects/f_omg_1/moa/africa/inp/bry/'   # <-- set to your path
 os.makedirs(outdir, exist_ok=True)
 
 # Regridding weights (one file per boundary; '9999' is replaced by EAST/WEST/NORTH/SOUTH)
-regrid_coef_file=os.path.join(outdir,'regrid_mercator_bry_9999.nc')
+# Kept in data/bry so the existing weights for this grid are reused
+weightdir='/projects/f_omg_1/moa/africa/data/bry/'
+os.makedirs(weightdir, exist_ok=True)
+regrid_coef_file=os.path.join(weightdir,'regrid_mercator_bry_9999.nc')
 
 #Receiver Grid Info
 #1grdfile='/home/om/cron/ECCOFS_OBS/MERCATOR/work/grid_eccofs_3km_08_b7.nc' # can be a thredds url
@@ -81,11 +84,14 @@ bdylist={'EAST':False, 'WEST':True, 'NORTH':True, 'SOUTH':True}
 #bdylist={'SOUTH':True}
 
 #Set time window for the run
-ndays_back = 7   # days of past data (real-time archive)
-ndays_fwd  = 0   # days of forecast
- 
-start_date = date.today() - timedelta(days=ndays_back) #data
-tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
+#ndays_back = 7   # days of past data (real-time archive)
+#ndays_fwd  = 0   # days of forecast
+#start_date = date.today() - timedelta(days=ndays_back) #data
+#tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
+
+# Fixed window: October 2026 run (must match the download script)
+start_date = date(2026,10,1)
+tend       = date(2026,11,1)
  
 sdate      = start_date.strftime('%Y%m%d')
 date_times = pd.date_range(start_date,tend)   # inclusive of both ends

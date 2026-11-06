@@ -437,7 +437,7 @@ LtracerSponge == F F                            ! temperature, salinity, inert
 
       DSTART =  0.0d0                      ! days
   TIDE_START =  0.0d0                      ! days
-    TIME_REF =  20240101.0d0               ! yyyymmdd.dd
+    TIME_REF =  20261001.0d0               ! yyyymmdd.dd
 
 ! Nudging/relaxation time scales, inverse scales will be computed
 ! internally, [1:Ngrids].
@@ -1154,7 +1154,7 @@ PIO_I2C_Preq = 65                 ! Maximum pending I2C requests
     NBCFILES == 1                          ! number of boundary files
 
 !    BRYNAME == ../inp/bry_gulfofguinea_Mercator_20240601_20240705.nc
-     BRYNAME == ../inp/bry_gulfofguinea_Mercator_2024.nc
+     BRYNAME == /projects/f_omg_1/moa/africa/inp/bry/bry_gulfofguinea_Mercator_20261001.nc
 
 ! Input climatology file names. The USER has the option to separate the
 ! climatology variables into individual NetCDF files (NCLMFILES > 1),
