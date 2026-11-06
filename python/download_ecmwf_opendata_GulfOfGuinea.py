@@ -31,6 +31,7 @@ Notes
 import os
 import sys
 import glob
+import time
 from datetime import date, timedelta
 
 import pandas as pd
@@ -41,7 +42,9 @@ from ecmwf.opendata import Client
 # USER SETTINGS FOR DOWNLOAD --------------------------------------------
 
 outdir = '/projects/f_omg_1/moa/africa/data/downloads/'
-tmpdir = '/projects/f_omg_1/moa/africa/data/downloads/tmp/'
+# Per-user temp folder, so users don't need write access to each other's tmp
+# and simultaneous runs don't delete each other's temporary GRIB files
+tmpdir = f'/projects/f_omg_1/moa/africa/data/downloads/tmp_{os.environ.get("USER", "user")}/'
 
 # GULF OF GUINEA BOUNDING BOX -16.0000   13.5000  -11.0000    8.0000
 latmin = -11.0
@@ -49,7 +52,9 @@ latmax = 8.0
 lonmin = -16.0
 lonmax = 13.5
 
-SOURCE = 'ecmwf'          # 'ecmwf' | 'aws' | 'google' | 'azure'
+# 'ecmwf' keeps only the last few days; use an archive mirror for past dates.
+# AWS throttles heavy use from Amarel (HTTP 503 "SlowDown"); Google works.
+SOURCE = 'google'       # 'ecmwf' | 'aws' | 'google' | 'azure'
 
 # IFS short names in the open data -> cfgrib names after reading
 PARAMS = ['10u', '10v', '2t', '2d', 'msl', 'ssr', 'str', 'strd', 'tp']
@@ -142,6 +147,7 @@ def main(argv):
             )
             grib_to_regional_netcdf(grib, ncfile)
             print('  wrote', ncfile)
+            time.sleep(2)      # be gentle with the server between runs
         except Exception as e:
             print(f'  !! could not get run {run}: {e}')
             if os.path.exists(ncfile) and not is_latest:
