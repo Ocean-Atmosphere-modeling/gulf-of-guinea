@@ -37,7 +37,15 @@ lonmax=-38.0
 #Set time
 #eli reccomends setting the reference time to the first of the year of the forecast run
 
-reftime=datetime.datetime(2026,1,1) #set output reference time in netcdf file (change to 2026)
+# Time window from the environment (see run_window.py):
+#   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
+#   hindcast: START_DATE / END_DATE
+from run_window import get_window, reference_time
+start_date, tend, mode = get_window()
+print(f'{mode} window: {start_date} to {tend}')
+
+# File time reference: Jan 1 of the start year (same as INI, CLM, rivers, forcing)
+reftime=reference_time(start_date)
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
 
@@ -83,16 +91,7 @@ L1hc=250 #how wide the surface and bottom boundary layers are (where does the st
 bdylist={'EAST':False, 'WEST':True, 'NORTH':True, 'SOUTH':True}
 #bdylist={'SOUTH':True}
 
-#Set time window for the run
-#ndays_back = 7   # days of past data (real-time archive)
-#ndays_fwd  = 0   # days of forecast
-#start_date = date.today() - timedelta(days=ndays_back) #data
-#tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
-
-# Fixed window: October 2026 run (must match the download script)
-start_date = date(2026,10,1)
-tend       = date(2026,11,1)
- 
+# (time window start_date/tend is set at the top, from run_window.py)
 sdate      = start_date.strftime('%Y%m%d')
 date_times = pd.date_range(start_date,tend)   # inclusive of both ends
  

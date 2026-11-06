@@ -40,23 +40,22 @@ pc = cartopy.crs.PlateCarree()
 #tart_date = datetime.datetime(2025,8,10) # COESSING August 2025
 # start_date = datetime.datetime(2026,,1) # Oceans26 
 
-reftime=datetime.datetime(2026,1,1)   # same reference as the BRY, CLM and river files
+# Time window from the environment (see run_window.py):
+#   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
+#   hindcast: START_DATE / END_DATE
+from run_window import get_window, reference_time
+start_date, tend, mode = get_window()
+
+# File time reference: Jan 1 of the start year (same as BRY, CLM, rivers, forcing)
+reftime=reference_time(start_date)
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
 
-#Set time window for the run
-#ndays_back = 7   # days of past data (real-time archive)
-#ndays_fwd  = 0   # days of forecast
-#start_date = date.today() - timedelta(days=ndays_back) #data
-#tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
-
-# Initial conditions for the October 2026 run: ONE day only (the run start).
-# Every day in the window is written to the same inifile, so keep start = end.
-start_date = date(2026,10,1)
-tend       = date(2026,10,1)
-
 sdate      = start_date.strftime('%Y%m%d')
-date_times = pd.date_range(start_date,tend)   # inclusive of both ends
+# Initial conditions are needed only at the START of the window. (Looping over
+# the whole window would overwrite the same inifile with each later day.)
+date_times = pd.date_range(start_date,start_date)
+print(f'{mode} window: {start_date} to {tend}; initial conditions for {start_date}')
 #Donor grid Info
 
 

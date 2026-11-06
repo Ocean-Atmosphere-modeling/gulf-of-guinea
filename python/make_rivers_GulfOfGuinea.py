@@ -94,8 +94,10 @@ def available_months(year, product_type):
         return None
 
 
-def plan_downloads(year, months, product_type):
-    """Split the months of one year into [(product, months), ...]."""
+def plan_downloads(year, months, product_type, allow_missing=False):
+    """Split the months of one year into [(product, months), ...].
+    allow_missing: months with no data yet (forecast window running past the
+    latest GloFAS data) are skipped with a warning; their days are persisted."""
     products = ['consolidated', 'intermediate'] if product_type == 'auto' else [product_type]
     plan, todo = [], list(months)
     for pt in products:
@@ -106,6 +108,10 @@ def plan_downloads(year, months, product_type):
         if use:
             plan.append((pt, use))
         todo = [m for m in todo if m not in use]
+    if todo and allow_missing:
+        print(f'  WARNING: no GloFAS data yet for {year} months {todo}; '
+              'those days will be persisted from the last available day')
+        return plan
     if todo:
         raise SystemExit(f'GloFAS {"/".join(products)} has no data for {year} months {todo}. '
                          'Consolidated data lag by months; try --product-type intermediate '
@@ -139,8 +145,10 @@ def download_glofas(year, months, fname, product_type='consolidated'):
     cdsapi.Client().retrieve('cems-glofas-historical', request, fname)
 
 
-def read_glofas(files, start, end):
-    """Return (dates, discharge[time, river], I, J, lat, lon) at the river points."""
+def read_glofas(files, start, end, persist=False):
+    """Return (dates, discharge[time, river], I, J, lat, lon) at the river points.
+    persist: if GloFAS ends before `end` (forecast days), repeat the last
+    available day's discharge up to `end`."""
     ds = xr.open_mfdataset(files, combine='by_coords') if len(files) > 1 \
         else xr.open_dataset(files[0])
     tname = 'valid_time' if 'valid_time' in ds.coords else 'time'
@@ -162,10 +170,15 @@ def read_glofas(files, start, end):
     ds = ds.sel(time=slice(start, end))
     if ds.sizes['time'] == 0:
         raise SystemExit(f'No GloFAS data between {start.date()} and {end.date()}')
-    expected = pd.date_range(start, end, freq='D')
-    missing = expected.difference(pd.DatetimeIndex(ds['time'].values))
+    have = pd.DatetimeIndex(ds['time'].values)
+    # days after the last GloFAS day are filled by persistence (if allowed)
+    expected = pd.date_range(start, have[-1] if persist else end, freq='D')
+    missing = expected.difference(have)
     if len(missing):
         print(f'  WARNING: {len(missing)} days missing from GloFAS, e.g. {missing[:3].date}')
+    if have[-1] < end and not persist:
+        raise SystemExit(f'GloFAS data end on {have[-1].date()}, before {end.date()}. '
+                         'Use --persist to repeat the last day forward.')
 
     glat = ds['latitude'].values
     glon = ds['longitude'].values
@@ -185,7 +198,31 @@ def read_glofas(files, start, end):
         lats.append(float(glat[j]))
         lons.append(float(glon[i]))
     dates = pd.DatetimeIndex(ds['time'].values)
-    return dates, np.array(Q).T, I, J, lats, lons
+    Q = np.array(Q).T
+    if persist and dates[-1] < end:
+        extra = pd.date_range(dates[-1] + pd.Timedelta(days=1), end, freq='D')
+        print(f'  Persisting GloFAS {dates[-1].date()} discharge for {len(extra)} '
+              f'days: {extra[0].date()} to {extra[-1].date()}')
+        Q = np.vstack([Q, np.repeat(Q[-1:], len(extra), axis=0)])
+        dates = dates.append(extra)
+    return dates, Q, I, J, lats, lons
+
+
+def glofas_file_stale(fname, end, max_age_hours=12):
+    """True if a cached GloFAS file ends before `end` and is older than
+    max_age_hours, i.e. newer intermediate data may exist and it should be
+    downloaded again (the forecast window moves forward every day)."""
+    import time
+    if not os.path.exists(fname):
+        return True
+    try:
+        with xr.open_dataset(fname) as ds:
+            tname = 'valid_time' if 'valid_time' in ds.coords else 'time'
+            last = pd.Timestamp(ds[tname].values.max()).floor('D') - pd.Timedelta(days=1)
+    except Exception:
+        return True
+    age_h = (time.time() - os.path.getmtime(fname)) / 3600
+    return last < end and age_h > max_age_hours
 
 
 def write_river_file(fname, reftime, dates, Q, I, J, lats, lons, glofas_src):
@@ -309,6 +346,9 @@ def main():
     p.add_argument('--outdir', default=outdir)
     p.add_argument('--outfile', help='output file name (default ' + outname + ')')
     p.add_argument('--clobber', action='store_true', help='overwrite existing output')
+    p.add_argument('--persist', action='store_true',
+                   help='repeat the last available GloFAS day forward to the end date '
+                        '(on by default when the window comes from the environment)')
     a = p.parse_args()
 
     if a.year:
@@ -317,8 +357,18 @@ def main():
     elif a.start and a.end:
         start, end = pd.Timestamp(a.start), pd.Timestamp(a.end)
         tag = f'{start:%Y%m%d}_{end:%Y%m%d}'
+    elif a.start or a.end:
+        p.error('give both --start and --end')
     else:
-        p.error('give --year, or both --start and --end')
+        # No dates given: use the shared window (NDAYS_BACK/NDAYS_FWD or
+        # START_DATE/END_DATE, see run_window.py), with persistence for the
+        # forecast days GloFAS does not have yet
+        from run_window import get_window
+        s, e, mode = get_window()
+        start, end = pd.Timestamp(s), pd.Timestamp(e)
+        tag = f'{start:%Y%m%d}_{end:%Y%m%d}'
+        a.persist = True
+        print(f'  {mode} window from environment: {start.date()} to {end.date()}')
     reftime = pd.Timestamp(a.reftime) if a.reftime else pd.Timestamp(start.year, 1, 1)
 
     if a.glofas_file:
@@ -329,12 +379,19 @@ def main():
         for yr in range(start.year, end.year + 1):
             m1 = start.month if yr == start.year else 1
             m2 = end.month if yr == end.year else 12
-            for pt, months in plan_downloads(yr, list(range(m1, m2 + 1)), a.product_type):
+            for pt, months in plan_downloads(yr, list(range(m1, m2 + 1)), a.product_type,
+                                             allow_missing=a.persist):
                 f = os.path.join(glofasdir, f'glofas_v4_{pt}_GulfOfGuinea_'
                                             f'{yr}{months[0]:02d}-{yr}{months[-1]:02d}.nc')
-                if not os.path.exists(f):
+                if glofas_file_stale(f, end):
+                    if os.path.exists(f):
+                        print(f'  {os.path.basename(f)} ends before {end.date()} and is '
+                              'over 12 h old: downloading again for newer days')
+                        os.remove(f)
                     download_glofas(yr, months, f, pt)
                 files.append(f)
+        if not files:
+            raise SystemExit('No GloFAS data available for this window')
     else:
         p.error('give --glofas-file or --download')
 
@@ -344,7 +401,7 @@ def main():
         raise SystemExit(f'{fname} exists; use --clobber to overwrite')
 
     print(f'  Reading GloFAS {start.date()} to {end.date()} from {files}')
-    dates, Q, I, J, lats, lons = read_glofas(files, start, end)
+    dates, Q, I, J, lats, lons = read_glofas(files, start, end, persist=a.persist)
     for k, r in enumerate(rivers):
         print(f'  {r[0]:14s} I={I[k]:4d} J={J[k]:4d}  mean Q = {Q[:, k].mean():9.1f} m3/s')
 

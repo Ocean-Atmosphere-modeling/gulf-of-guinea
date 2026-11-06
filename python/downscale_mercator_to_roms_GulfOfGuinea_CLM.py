@@ -56,20 +56,18 @@ pc = cartopy.crs.PlateCarree()
 
 #Set time
 
-reftime=datetime.datetime(2026,1,1)
+# Time window from the environment (see run_window.py):
+#   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
+#   hindcast: START_DATE / END_DATE
+# One CLM file is made for each day in the window.
+from run_window import get_window, reference_time
+start_date, tend, mode = get_window()
+print(f'{mode} window: {start_date} to {tend}')
+
+# File time reference: Jan 1 of the start year (same as INI, BRY, rivers, forcing)
+reftime=reference_time(start_date)
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
-
-# number of days to process - creates a new file for each day
-#Set time window for the run
-#ndays_back = 7   # days of past data (real-time archive)
-#ndays_fwd  = 0   # days of forecast
-#start_date = date.today() - timedelta(days=ndays_back) #data
-#tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
-
-# Fixed window: October 2026 run (must match the download script)
-start_date = date(2026,10,1)
-tend       = date(2026,11,1)
 
 sdate      = start_date.strftime('%Y%m%d')
 date_times = pd.date_range(start_date,tend)   # inclusive of both ends
@@ -116,6 +114,19 @@ BRYflag=False
 #Main Program
 ############################################################################
 
+def clm_is_current(clmfile, mfilename):
+    """True if clmfile has its time record and is newer than the Mercator file."""
+    if not os.path.exists(clmfile):
+        return False
+    try:
+        with nc.Dataset(clmfile) as d:
+            if d.dimensions['time'].size < 1:
+                return False
+    except Exception:
+        return False                      # unreadable / truncated
+    return os.path.getmtime(clmfile) >= os.path.getmtime(mfilename)
+
+
 def main():
     ########################################################################
     print('Initializing grids and regridder')
@@ -143,12 +154,17 @@ def main():
     for day in date_times:
 
         print(' ')
-        # Skip days whose CLM file already exists (e.g. after a crash/restart)
-        if os.path.exists(os.path.join(outdir,day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc'))):
-            print(day.strftime(' CLM file for %Y-%m-%d already exists, skipping'))
-            continue
         #filename = day.strftime(datadir+'mercator_GulfOfGuinea_RA_%Y_%m_%d.nc')
         mfilename = day.strftime(datadir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc')
+        # Skip a day only if its CLM file is complete AND newer than its Mercator
+        # file. An empty file (crashed run) or one made from an older Mercator
+        # forecast of that day (re-downloaded since) is made again.
+        clmfile=os.path.join(outdir,day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc'))
+        if clm_is_current(clmfile, mfilename):
+            print(day.strftime(' CLM file for %Y-%m-%d is up to date, skipping'))
+            continue
+        if os.path.exists(clmfile):
+            os.remove(clmfile)   # incomplete or out of date: rebuild it
         print('Reading input data from ...')
         print(mfilename)
         

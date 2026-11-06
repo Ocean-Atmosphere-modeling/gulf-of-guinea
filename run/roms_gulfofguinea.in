@@ -228,7 +228,7 @@ ad_VolCons(north) ==  F                            ! northern boundary
 
 ! Time-Stepping parameters.
 
-      NTIMES == 3600 
+      NTIMES == 22320                          ! 31 days: Oct 1 00:00 - Nov 1 00:00 2026
           DT == 120.0d0                            ! 720 timesteps per day
      NDTFAST == 30
 
@@ -1106,11 +1106,11 @@ PIO_I2C_Preq = 65                 ! Maximum pending I2C requests
 
 ! Input NetCDF file names, [1:Ngrids].
 
-     GRDNAME == ../inp/GulfOfGuinea_4km.nc
+     GRDNAME == /projects/f_omg_1/moa/africa/inp/grd_GulfOfGuinea_4km.nc
  
 ! Initial conditions from Mercator
 
-     ININAME == ../inp/ini_gulfofguinea_Mercator_2024_04_01.nc   
+     ININAME == /projects/f_omg_1/moa/africa/inp/ini/ini_gulfofguinea_Mercator_20261001.nc
 
      ITLNAME == roms_itl.nc
      IRPNAME == roms_irp.nc
@@ -1168,30 +1168,50 @@ PIO_I2C_Preq = 65                 ! Maximum pending I2C requests
 
 !  CLMNAME == ../inp/clm_gulfofguinea_Mercator_20240601_20240705.nc
 
-   CLMNAME == ../inp/clm_gulfofguinea_Mercator_2024_01.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_02.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_03.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_04.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_05.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_06.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_07.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_08.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_09.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_10.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_11.nc |
-              ../inp/clm_gulfofguinea_Mercator_2024_12.nc 
+   CLMNAME == /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_01.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_02.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_03.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_04.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_05.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_06.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_07.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_08.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_09.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_10.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_11.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_12.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_13.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_14.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_15.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_16.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_17.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_18.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_19.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_20.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_21.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_22.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_23.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_24.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_25.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_26.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_27.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_28.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_29.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_30.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_10_31.nc |
+              /projects/f_omg_1/moa/africa/inp/clm/clm_gulfofguinea_Mercator_2026_11_01.nc
 
 ! Input climatology nudging coefficients file name.
 
-     NUDNAME == ../inp/nud_gulfofguinea_Nf15.nc
+     NUDNAME == /projects/f_omg_1/moa/africa/inp/nud_gulfofguinea_Nf15.nc
 
 ! Input Sources/Sinks forcing (like river runoff) file name.
 
-     SSFNAME == /projects/f_omg_1/moa/africa/inp/riv/riv_gulfofguinea_20261001_20261031_v2.nc
+     SSFNAME == /projects/f_omg_1/moa/africa/inp/riv/riv_gulfofguinea_20261001_20261101_v2.nc
 
 ! Input tidal forcing file name.
 
-    TIDENAME == ../inp/tid_tpxo_GulfOfGuinea_4km.nc
+    TIDENAME == /projects/f_omg_1/moa/africa/inp/tid_tpxo_GulfOfGuinea_4km.nc
 
 ! Input forcing NetCDF file name(s).
 !
@@ -1213,18 +1233,7 @@ PIO_I2C_Preq = 65                 ! Maximum pending I2C requests
 
      NFFILES == 1                          ! number of unique forcing files
 
-     FRCNAME == ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202401.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202402.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202403.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202404.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202405.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202406.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202407.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202408.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202409.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202410.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202411.nc |
-                ../inp/GulfOfGuinea_frc_ERA5_bulkflux_202412.nc 
+     FRCNAME == /projects/f_omg_1/moa/africa/data/blk/GulfOfGuinea_frc_IFS_bulkflux_20261001.nc 
 
 !    NFFILES == 9                          ! number of unique forcing files
 
@@ -1242,11 +1251,11 @@ PIO_I2C_Preq = 65                 ! Maximum pending I2C requests
 
      DAINAME == roms_dai.nc
      GSTNAME == roms_gst.nc
-     RSTNAME == ../out/rst_gog_001.nc
-     HISNAME == ../out/his_gog_001.nc
-     QCKNAME == ../out/qck_gog_001.nc
-     AVGNAME == ../out/avg_gog_001.nc
-     DIANAME == ../out/dia_gog_001.nc
+     RSTNAME == /projects/f_omg_1/moa/africa/out/rst_gog_001.nc
+     HISNAME == /projects/f_omg_1/moa/africa/out/his_gog_001.nc
+     QCKNAME == /projects/f_omg_1/moa/africa/out/qck_gog_001.nc
+     AVGNAME == /projects/f_omg_1/moa/africa/out/avg_gog_001.nc
+     DIANAME == /projects/f_omg_1/moa/africa/out/dia_gog_001.nc
      XTRNAME == roms_xtr.nc
      TLMNAME == roms_tlm.nc
      TLFNAME == roms_tlf.nc

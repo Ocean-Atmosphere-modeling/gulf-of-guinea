@@ -22,4 +22,8 @@
 #SBATCH --mail-user=cb1237@marine.rutgers.edu
 
 ## It is important to have --mpi=pmi2 here or ROMS will not run
-srun --mpi=pmi2 ./romsM roms_gulfofguinea.in     
+# ROMS input file: first argument, e.g. "sbatch job_gog.sh roms_gulfofguinea_20261103.in"
+# (default roms_gulfofguinea.in). Run from the run/ directory.
+INFILE=${1:-roms_gulfofguinea.in}
+echo "Running ROMS with ${INFILE} on $(date)"
+srun --mpi=pmi2 ./romsM ${INFILE}     

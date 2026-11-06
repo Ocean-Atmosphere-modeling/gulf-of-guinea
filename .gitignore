@@ -13,3 +13,7 @@ err.slurm.*
 # Python cache
 __pycache__/
 *.pyc
+
+# Driver step logs
+logs/
+*.log
