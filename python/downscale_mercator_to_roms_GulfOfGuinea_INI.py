@@ -47,7 +47,7 @@ rtime=np.datetime64(reftime.date())
 # number of days to process - creates a new file for each day
 #Set time window for the run
 ndays_back = 7   # days of past data (real-time archive)
-ndays_fwd  = 0   # days of forecast
+ndays_fwd  = 2   # days of forecast
  
 start_date = date.today() - timedelta(days=ndays_back) #data
 tend       = date.today() + timedelta(days=ndays_fwd)  #forecast
