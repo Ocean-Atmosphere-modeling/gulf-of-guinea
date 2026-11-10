@@ -11,7 +11,10 @@ import pandas as pd
 
 # DIRECTORIES WHERE THE DOWNLOADED MERCATOR DATA IS HELD
 outdir='/projects/f_omg_1/moa/africa/data/downloads/'
-tmpdir='/projects/f_omg_1/moa/africa/data/temp/'
+# Per-user temp folder: this script deletes every .nc in tmpdir when it
+# finishes, so a shared folder would let two users delete each other's files
+tmpdir=f'/projects/f_omg_1/moa/africa/data/temp_{os.environ.get("USER","user")}/'
+os.makedirs(tmpdir, exist_ok=True)
 
 # GULF OF GUINEA BOUNDING BOX -16.0000   13.5000  -11.0000    8.0000
 latmin=-11.0
@@ -33,15 +36,19 @@ ids=['cmems_mod_glo_phy-so_anfc_0.083deg_P1D-m',
 
 # SET THE TIME RANGE FOR DOWNLOAD
 
-#Set time window for the run
-ndays_back = 7   # days of past data (analysis/real-time archive)
-ndays_fwd  = 0   # days of forecast
-
-tstart = date.today() - timedelta(days=ndays_back)
-tend   = date.today() + timedelta(days=ndays_fwd)
-
+# Time window from the environment (see run_window.py):
+#   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
+#   hindcast: START_DATE / END_DATE, e.g. START_DATE=2026-10-01 END_DATE=2026-11-01
+from run_window import get_window
+tstart, tend, mode = get_window()
+print(f'{mode} window: {tstart} to {tend}')
 
 days=pd.date_range(tstart,tend)
+
+# Files for days from (today - REFRESH_DAYS) onward are downloaded again even
+# if they exist: those are forecasts/recent analyses that Mercator updates
+# every day. Older days are skipped if already downloaded.
+refresh_from = date.today() - timedelta(days=int(os.environ.get('REFRESH_DAYS', 1)))
 
 # END USER SETTINGS FOR DOWNLOAD ----------------------------------------
 
@@ -49,6 +56,11 @@ def main(argv):
     print('MAIN')
     for day in days:
         print(day)
+
+        if (os.path.exists(day.strftime(outdir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc'))
+                and day.date() < refresh_from):
+            print('  already downloaded, skipping')
+            continue
 
         for f in glob.glob(tmpdir+'TMP*.nc'):
             os.remove(f)
@@ -94,9 +106,15 @@ def main(argv):
             print(f"An error occurred when combining files via ncks: {e}")
             
             if os.path.exists(tmpofilename):
-                print(f'Deleting: {tmpofilename}') 
+                print(f'Deleting: {tmpofilename}')
+                os.remove(tmpofilename)
         else:
+            # Remove first: an existing file may belong to another user (not
+            # writable by us), but the shared folder lets group members replace it
+            if os.path.exists(ofilename):
+                os.remove(ofilename)
             shutil.copyfile(tmpofilename,ofilename)
+            os.chmod(ofilename, 0o664)   # group-writable for the other users
             
 
 if __name__ == "__main__":
