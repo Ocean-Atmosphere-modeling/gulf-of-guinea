@@ -73,6 +73,10 @@ rivers = [
 # Daily mean discharge for calendar day D is placed at D + time_offset days
 time_offset = 0.5
 
+# Forecast mode: the latest GloFAS day may be persisted forward at most this
+# many days before the window start (GloFAS normally lags ~4 days)
+MAX_PERSIST_GAP_DAYS = 10
+
 # END USER SETTINGS -----------------------------------------------------------
 
 
@@ -167,9 +171,25 @@ def read_glofas(files, start, end, persist=False):
     if var == 'avg_dis':
         days = days - pd.Timedelta(days=1)
     ds = ds.assign_coords(time=days)
-    ds = ds.sel(time=slice(start, end))
+    ds = ds.sel(time=slice(None, end))
     if ds.sizes['time'] == 0:
-        raise SystemExit(f'No GloFAS data between {start.date()} and {end.date()}')
+        raise SystemExit(f'No GloFAS data on or before {end.date()}')
+    last = pd.Timestamp(ds['time'].values[-1])
+    if last < start:
+        # GloFAS (about 4 days behind real time) ends before the window starts:
+        # with persistence, carry its latest day over the whole window
+        if not persist:
+            raise SystemExit(f'No GloFAS data between {start.date()} and {end.date()} '
+                             f'(latest is {last.date()}); use --persist')
+        if (start - last).days > MAX_PERSIST_GAP_DAYS:
+            raise SystemExit(f'Latest GloFAS day {last.date()} is more than '
+                             f'{MAX_PERSIST_GAP_DAYS} days before {start.date()}: '
+                             'too old to persist, check the GloFAS download')
+        print(f'  WARNING: GloFAS ends {last.date()}, before the window starts '
+              f'({start.date()}); persisting {last.date()} over the whole window')
+        ds = ds.isel(time=[-1])
+    else:
+        ds = ds.sel(time=slice(start, end))
     have = pd.DatetimeIndex(ds['time'].values)
     # days after the last GloFAS day are filled by persistence (if allowed)
     expected = pd.date_range(start, have[-1] if persist else end, freq='D')
