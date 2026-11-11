@@ -38,26 +38,50 @@ pc = cartopy.crs.PlateCarree()
 
 # Set time
 #tart_date = datetime.datetime(2025,8,10) # COESSING August 2025
-start_date = datetime.datetime(2026,3,1) # Oceans26 
+# start_date = datetime.datetime(2026,,1) # Oceans26 
 
-nday=1
-date_times = [start_date  + timedelta(days=i) for i in range(nday)] 
-reftime=datetime.datetime(2024,1,1)
+# Time window from the environment (see run_window.py):
+#   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
+#   hindcast: START_DATE / END_DATE
+from run_window import get_window, reference_time
+start_date, tend, mode = get_window()
+
+# File time reference: Jan 1 of the start year (same as BRY, CLM, rivers, forcing)
+reftime=reference_time(start_date)
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
 
-# Encode start date in the output INIFILE name
-inifile=start_date.strftime('ini_gulfofguinea_Mercator_%Y_%m_%d.nc')
-print(inifile)
+sdate      = start_date.strftime('%Y%m%d')
+# Initial conditions are needed only at the START of the window. (Looping over
+# the whole window would overwrite the same inifile with each later day.)
+date_times = pd.date_range(start_date,start_date)
+print(f'{mode} window: {start_date} to {tend}; initial conditions for {start_date}')
+#Donor grid Info
+
 
 # Mercator donor input files
-datadir='/Users/wilkin/Dropbox/_roms-db/coessing/mercator/downloads/'
-regrid_coef_file='regrid_mercator_ini.nc'
+datadir=datadir='/projects/f_omg_1/moa/africa/data/downloads/'
+
+# Output directory for the initial conditions file
+outdir='/projects/f_omg_1/moa/africa/inp/ini/'   # <-- set to your path
+os.makedirs(outdir, exist_ok=True)
+
+# Regridding weights kept in data/ini (created on the first run, reused after)
+weightdir='/projects/f_omg_1/moa/africa/data/ini/'
+os.makedirs(weightdir, exist_ok=True)
+regrid_coef_file=os.path.join(weightdir,'regrid_mercator_ini.nc')
+
+
+# Receiver Output file - named with the start date, same as the BRY file
+# (the initial conditions are valid at the first day of the time window)
+inifile=os.path.join(outdir, f'ini_gulfofguinea_Mercator_{sdate}.nc')
 
 # Output/receiver Grid 
 
+
+
 # roms gridfile 
-L1grdfile='../../grid/GulfOfGuinea_4km.nc'
+L1grdfile='/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
 
 # roms s-coordinate parameters
 L1theta_s=7.0
@@ -88,8 +112,16 @@ def main():
     #Getting the mercator grid information
     day=date_times[0]
     mfilename = day.strftime(datadir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc')
+
+     # Fail early with a clear message if the input file is missing
+    if not os.path.exists(mfilename):
+        raise FileNotFoundError(f'Missing Mercator file: {mfilename}')
+
+    print('Reading input data from ...')
     print(mfilename)
     dsmgrd=xr.open_dataset(mfilename)
+
+
     mlat=dsmgrd['latitude']
     mlon=dsmgrd['longitude']
     mdepth=dsmgrd['depth']
@@ -115,7 +147,9 @@ def main():
     ########################################################################
         if INIflag:
             start_time=time.time()
-            downscale_init_file(cfgrd,dsmerc)
+            print(' Output will be to inifile')
+            print(' '+inifile)
+            downscale_init_file(cfgrd,dsmerc,inifile)
             end_time=time.time()
             elapsed_time = end_time - start_time
             print(f"Initilization file processing time: {elapsed_time} seconds")
@@ -163,7 +197,7 @@ def dataset_get_Z(dataout,varnew):
 
 
         
-def downscale_init_file(cfgrd,dsmerc):
+def downscale_init_file(cfgrd,dsmerc,inifile):
 
     tmp=dsmerc
     mlat=dsmerc['latitude']
@@ -201,7 +235,7 @@ def downscale_init_file(cfgrd,dsmerc):
     elapsed_time = end_time - start_time
     print(f'REGRIDDER time: {elapsed_time}')
     
-    rutil.create_init_file(inifile,cfgrd,tunits)
+    rutil.create_init_file(inifile,cfgrd,tunits)  # Pass the inifile to the function
 
     
     print('RUNNING horizontal regridding')

@@ -6,6 +6,7 @@ Adapted from DOWNSCALE_ROMS_OUTPUT.py
 created by Elias Hunter, hunter@marine.rutgers.edu, 12/19/2023 
 Modified by John Wilkin 07/2025 for COESSING
 Modified by John Wilkin 03/2026 for Oceans26
+Modified by Becca Horwitz 10/27/2026, changed output directory and input times
 """
 import os,glob
 import numpy as np
@@ -36,7 +37,15 @@ lonmax=-38.0
 #Set time
 #eli reccomends setting the reference time to the first of the year of the forecast run
 
-reftime=datetime.datetime(2024,1,1) #set output reference time in netcdf file
+# Time window from the environment (see run_window.py):
+#   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
+#   hindcast: START_DATE / END_DATE
+from run_window import get_window, reference_time
+start_date, tend, mode = get_window()
+print(f'{mode} window: {start_date} to {tend}')
+
+# File time reference: Jan 1 of the start year (same as INI, CLM, rivers, forcing)
+reftime=reference_time(start_date)
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
 
@@ -45,15 +54,23 @@ rtime=np.datetime64(reftime.date())
 #Donor inputfiles
 #atadir='/home/om/cron/ECCOFS_OBS/MERCATOR/data/raw/'
 #egrid_coef_file='/home/om/cron/ECCOFS_OBS/MERCATOR/data/mercator_bdry_9999.nc'
-datadir='/Users/wilkin/Dropbox/_roms-db/coessing/mercator/downloads/'
-regrid_coef_file='regrid_mercator_bry_9999.nc'
+datadir='/projects/f_omg_1/moa/africa/data/downloads/'
 
-# WRITE OUT DIRECTORY!!!!
 
+
+# Output directory for the boundary file
+outdir='/projects/f_omg_1/moa/africa/inp/bry/'   # <-- set to your path
+os.makedirs(outdir, exist_ok=True)
+
+# Regridding weights (one file per boundary; '9999' is replaced by EAST/WEST/NORTH/SOUTH)
+# Kept in data/bry so the existing weights for this grid are reused
+weightdir='/projects/f_omg_1/moa/africa/data/bry/'
+os.makedirs(weightdir, exist_ok=True)
+regrid_coef_file=os.path.join(weightdir,'regrid_mercator_bry_9999.nc')
 
 #Receiver Grid Info
 #1grdfile='/home/om/cron/ECCOFS_OBS/MERCATOR/work/grid_eccofs_3km_08_b7.nc' # can be a thredds url
-L1grdfile='../../grid/GulfOfGuinea_4km.nc'
+L1grdfile='/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
 L1theta_s=7.0 #how close the levels are near the surface
 L1theta_b=2.0 #how close the levels are near the bottom
 L1Tcline=250.0 #total number of levels you will have
@@ -74,17 +91,12 @@ L1hc=250 #how wide the surface and bottom boundary layers are (where does the st
 bdylist={'EAST':False, 'WEST':True, 'NORTH':True, 'SOUTH':True}
 #bdylist={'SOUTH':True}
 
-#need data from three days ago to now
-#n day would be 8
-nday=5
-#change this to something like date.time.now (in the download)
-start_date = datetime.datetime(2026, 3, 1)
-sdate=start_date.strftime('%Y%m%d')
-#copy from the download script of timedelta minus 5 days
-date_times = [start_date  + timedelta(days=i) for i in range(nday)] 
-
+# (time window start_date/tend is set at the top, from run_window.py)
+sdate      = start_date.strftime('%Y%m%d')
+date_times = pd.date_range(start_date,tend)   # inclusive of both ends
+ 
 # Receiver Output file
-bryfile=f'bry_gulfofguinea_Mercator_{sdate}.nc'
+bryfile = os.path.join(outdir, f'bry_gulfofguinea_Mercator_{sdate}.nc')
 
 ############################################################################
 #Main Program
@@ -117,6 +129,13 @@ def main():
         filelist.append(mfilename)
 
     print(filelist)   
+
+    # Fail early with a clear message if any daily file (past or forecast) is missing
+    missing = [f for f in filelist if not os.path.exists(f)]
+    if missing:
+        raise FileNotFoundError(f'Missing Mercator files: {missing}')
+
+
     start_time=time.time()
     dsmerc=xr.open_mfdataset(filelist)
     dsmerc['zos']= dsmerc['zos'].interpolate_na(dim="longitude", method="nearest",limit=None,fill_value="extrapolate").interpolate_na(dim="latitude", method="nearest",limit=None,fill_value="extrapolate")

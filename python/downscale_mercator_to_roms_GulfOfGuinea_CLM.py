@@ -56,22 +56,34 @@ pc = cartopy.crs.PlateCarree()
 
 #Set time
 
-reftime=datetime.datetime(2024,1,1)
+# Time window from the environment (see run_window.py):
+#   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
+#   hindcast: START_DATE / END_DATE
+# One CLM file is made for each day in the window.
+from run_window import get_window, reference_time
+start_date, tend, mode = get_window()
+print(f'{mode} window: {start_date} to {tend}')
+
+# File time reference: Jan 1 of the start year (same as INI, BRY, rivers, forcing)
+reftime=reference_time(start_date)
 tunits=reftime.strftime('days since %Y-%m-%d')
 rtime=np.datetime64(reftime.date())
 
-# number of days to process - creates a new file for each day
-nday=5
-start_date = datetime.datetime(2024, 9, 17)
-start_date = datetime.datetime(2025, 8, 10)
-start_date = datetime.datetime(2026, 3, 1)
-sdate=start_date.strftime('%Y%m%d')
-date_times = [start_date  + timedelta(days=i) for i in range(nday)]
+sdate      = start_date.strftime('%Y%m%d')
+date_times = pd.date_range(start_date,tend)   # inclusive of both ends
 #Donor grid Info
 
 #Donor inputfiles
-datadir='/Users/wilkin/Dropbox/_roms-db/coessing/mercator/downloads/'
-regrid_coef_file='regrid_mercator_clm.nc'
+datadir='/projects/f_omg_1/moa/africa/data/downloads/'
+
+# Output directory for the daily climatology files
+outdir='/projects/f_omg_1/moa/africa/inp/clm/'   # <-- set to your path
+os.makedirs(outdir, exist_ok=True)
+
+# Regridding weights kept in data/clm so the existing weights for this grid are reused
+weightdir='/projects/f_omg_1/moa/africa/data/clm/'
+os.makedirs(weightdir, exist_ok=True)
+regrid_coef_file=os.path.join(weightdir,'regrid_mercator_clm.nc')
 
 # Receiver Output file << this is now set inside the day loop
 #lmfile=f'clm_gulfofguinea_Mercator_{sdate}.nc'
@@ -79,7 +91,7 @@ regrid_coef_file='regrid_mercator_clm.nc'
 # Output/receiver ROMS Grid 
 
 # roms gridfile 
-L1grdfile='../../grid/GulfOfGuinea_4km.nc'
+L1grdfile='/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
 
 # roms s-coordinate parameters
 L1theta_s=7.0
@@ -102,11 +114,32 @@ BRYflag=False
 #Main Program
 ############################################################################
 
+def clm_is_current(clmfile, mfilename):
+    """True if clmfile has its time record and is newer than the Mercator file."""
+    if not os.path.exists(clmfile):
+        return False
+    try:
+        with nc.Dataset(clmfile) as d:
+            if d.dimensions['time'].size < 1:
+                return False
+    except Exception:
+        return False                      # unreadable / truncated
+    return os.path.getmtime(clmfile) >= os.path.getmtime(mfilename)
+
+
 def main():
     ########################################################################
     print('Initializing grids and regridder')
     ########################################################################
     
+ # Fail early with a clear message if any daily file (past or forecast) is missing
+    filelist=[day.strftime(datadir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc') for day in date_times]
+    missing=[f for f in filelist if not os.path.exists(f)]
+    if missing:
+        raise FileNotFoundError(f'Missing Mercator files: {missing}')
+
+
+
     #Getting the mercator grid information
     day=date_times[0]
     #filename = day.strftime(datadir+'mercator_GulfOfGuinea_RA_%Y_%m_%d.nc')
@@ -119,10 +152,19 @@ def main():
     
     
     for day in date_times:
-        
+
         print(' ')
         #filename = day.strftime(datadir+'mercator_GulfOfGuinea_RA_%Y_%m_%d.nc')
         mfilename = day.strftime(datadir+'mercator_GulfOfGuinea_RT_%Y_%m_%d.nc')
+        # Skip a day only if its CLM file is complete AND newer than its Mercator
+        # file. An empty file (crashed run) or one made from an older Mercator
+        # forecast of that day (re-downloaded since) is made again.
+        clmfile=os.path.join(outdir,day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc'))
+        if clm_is_current(clmfile, mfilename):
+            print(day.strftime(' CLM file for %Y-%m-%d is up to date, skipping'))
+            continue
+        if os.path.exists(clmfile):
+            os.remove(clmfile)   # incomplete or out of date: rebuild it
         print('Reading input data from ...')
         print(mfilename)
         
@@ -138,7 +180,8 @@ def main():
         if INIflag:
             start_time=time.time()
 
-            inifile=day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc')
+            # inifile=day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc')
+            inifile=os.path.join(outdir,day.strftime('clm_gulfofguinea_Mercator_%Y_%m_%d.nc'))
             print(' Output will be to inifile')
             print(' '+inifile)
 

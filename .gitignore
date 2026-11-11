@@ -1,0 +1,19 @@
+# ROMS build output (made by run/build_roms.sh)
+Build_roms*/
+romsM
+romsG
+romsO
+romsS
+build.log
+
+# SLURM job logs
+out.slurm.*
+err.slurm.*
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Driver step logs
+logs/
+*.log
