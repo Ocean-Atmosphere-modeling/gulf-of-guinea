@@ -64,6 +64,13 @@ EXPECTED = ['u10', 'v10', 't2m', 'd2m', 'msl', 'ssr', 'str', 'strd', 'tp']
 ndays_back = int(os.environ.get('NDAYS_BACK', 3)) # days of past data
 ndays_fwd = int(os.environ.get('NDAYS_FWD', 2))# days of forecast
 
+# Model selection (ifs, aifs-single, aifs-ens)
+# Note: 0.1 degree resolution is only available in ifs variant
+mod_set= 'ifs'
+
+# Resolution adjustment (0p25 or 0p1)
+res_set= '0p1' 
+
 
 SHORT_STEPS = [3, 6, 9, 12]
 
@@ -104,7 +111,7 @@ def main(argv):
     os.makedirs(outdir, exist_ok=True)
     os.makedirs(tmpdir, exist_ok=True)
 
-    client = Client(source=SOURCE, model='ifs', resol='0p25')
+    client = Client(source=SOURCE, model=mod_set, resol=res_set)
 
     max_step = (ndays_fwd + 1) * 24
     assert max_step <= 144, 'ndays_fwd too large for 3-hourly open data steps'
@@ -124,7 +131,7 @@ def main(argv):
 
     for run in runs:
         ncfile = os.path.join(
-            outdir, run.strftime('ecmwf_ifs_0p25_GulfOfGuinea_%Y%m%d%H.nc'))
+            outdir, run.strftime(f'ecmwf_{mod_set}_{res_set}_GulfOfGuinea_%Y%m%d%H.nc'))
         is_latest = (run == latest)
 
         if os.path.exists(ncfile) and not is_latest:
