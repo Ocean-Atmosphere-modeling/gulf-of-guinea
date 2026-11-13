@@ -56,3 +56,5 @@ tidal_forcing = TidalForcing(
 
 # Save the object's data to a NETCF file.  
 tidal_forcing.save(outdir+outfile)
+#os.chmod(outdir+outfile, 0o664)
+
