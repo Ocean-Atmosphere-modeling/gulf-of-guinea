@@ -52,6 +52,7 @@ tidal_forcing = TidalForcing(
     ntides=15,  # Number of constituents to consider <= 15. Default is 10.
     model_reference_date=reftime,  # Model reference date. Default is January 1, 2000.
     use_dask=True,
+    convention='rutgers',
 )
 
 # Save the object's data to a NETCF file.  
