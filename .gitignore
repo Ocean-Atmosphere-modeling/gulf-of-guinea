@@ -17,3 +17,6 @@ __pycache__/
 # Driver step logs
 logs/
 *.log
+
+# ROMS .in files written for each forecast cycle
+run/roms_gulfofguinea_2*.in

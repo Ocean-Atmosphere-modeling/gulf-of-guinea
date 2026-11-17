@@ -24,6 +24,7 @@
 ## It is important to have --mpi=pmi2 here or ROMS will not run
 # ROMS input file: first argument, e.g. "sbatch job_gog.sh roms_gulfofguinea_20261103.in"
 # (default roms_gulfofguinea.in). Run from the run/ directory.
+umask 002   # new files/folders group-writable, so Becca and Sean can update them (after all #SBATCH lines)
 INFILE=${1:-roms_gulfofguinea.in}
 echo "Running ROMS with ${INFILE} on $(date)"
 srun --mpi=pmi2 ./romsM ${INFILE}     

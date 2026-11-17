@@ -20,6 +20,8 @@
 
 set -euo pipefail
 
+umask 002   # new files/folders group-writable, so Becca and Sean can update them
+
 REPO=/projectsp/f_omg_1/cbenton/gulf-of-guinea
 LOGDIR=/projects/f_omg_1/moa/africa/out/forecast/logs
 

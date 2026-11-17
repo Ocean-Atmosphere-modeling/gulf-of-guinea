@@ -47,6 +47,8 @@
 
 set -euo pipefail
 
+umask 002   # new files/folders group-writable, so Becca and Sean can update them
+
 # ----------------------------------------------------------------------------
 # USER SETTINGS - edit these for your system
 # ----------------------------------------------------------------------------

@@ -17,6 +17,8 @@
 
 set -e                                    # stop if a step fails
 
+umask 002   # new files/folders group-writable, so Becca and Sean can update them
+
 # USER SETTINGS ---------------------------------------------------------
 START_DATE=${1:-2026-10-01}               # first day of the run (YYYY-MM-DD)
 NDAYS_FWD=0                               # forecast days past today (0 for a hindcast)

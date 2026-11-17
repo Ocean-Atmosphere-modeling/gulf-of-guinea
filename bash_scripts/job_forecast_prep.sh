@@ -22,6 +22,8 @@
 
 set -euo pipefail
 
+umask 002   # new files/folders group-writable, so Becca and Sean can update them
+
 : "${START_DATE:?START_DATE not set (submit with bash_scripts/run_forecast_cycle.sh)}"
 : "${END_DATE:?END_DATE not set}"
 export START_DATE END_DATE

@@ -27,6 +27,8 @@
 
 set -e                                    # stop if a step fails
 
+umask 002   # new files/folders group-writable, so Becca and Sean can update them
+
 # Python environment: May have to change depending on your setup
 source ~/miniforge3/etc/profile.d/conda.sh
 conda activate guinea2
