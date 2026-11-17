@@ -1,11 +1,12 @@
 """
-Creates a tidal harmonic netcdf with unified time.
+Creates a tidal harmonic netcdf with unified reference time and
+zero_phase_date variable (replaces TIDE_START) using CWorthy-ocean's
+roms-tools, rutgers tides branch.
  
 Once created, file will remain functional so long as TIME_REF matches
 the given reference time variable. 
  
-A separate script is used for setting zero_phase_date, which overwrites
-TIDE_START for ease of use in active forecasting.
+A separate script is used for resetting zero_phase_date.
 """
 
 
@@ -57,5 +58,4 @@ tidal_forcing = TidalForcing(
 
 # Save the object's data to a NETCF file.  
 tidal_forcing.save(outdir+outfile)
-#os.chmod(outdir+outfile, 0o664)
 

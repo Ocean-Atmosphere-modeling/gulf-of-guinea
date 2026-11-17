@@ -1,11 +1,10 @@
 """
-Saves a new copy of a tidal forcing netcdf and adds a zero_phase_date variable
+Saves a new copy of a tidal forcing netcdf and adds a zero_phase_date variable if
+one does not exist, or overwrites an existing zpd if extant.
 
 zero_phase_date overrides the TIDE_START value in a roms input file
 
 tide_add_time
-
-Created by Sean Devine 2026/11
 """
 
 import os
@@ -52,11 +51,9 @@ def tide_add_time(input_tide, tide_time, outdir):
         else: 
             print('zero_phase_date extant, rewriting ZPD')
 
-#        tide_format = tide_time.strftime(%Y%m%d.%f)
         tidedate = round(float(tide_time.strftime('%Y%m%d.%f')),4)
         zero_phase_date[:] = tidedate
-#    os.chmod(outfile, 0o664)
-    #sets file permissions to rw-rw-r--
+
 
 
 if __name__ == '__main__':
