@@ -72,6 +72,12 @@
 #define ADD_FSOBC       /* These do nothing if TIDES are not defined */
 #define ADD_M2OBC
 #define TIDE_GENERATING_FORCES
+#define RAMP_TIDES      /* ramp boundary tides (SSH_TIDES, UV_TIDES) from 0 with
+                           tanh(days since DSTART): 76% at 1 day, 96% at 2, 99.5% at 3.
+                           Each forecast cycle is a cold start, so the 3-day analysis
+                           period absorbs the ramp. Does NOT ramp TIDE_GENERATING_FORCES.
+                           Turn off if cycles are ever restarted from a previous run's
+                           rst file (it would ramp the tides down again at each restart). */
 #undef  ANA_NUDGCOEF
 
 /* biology */

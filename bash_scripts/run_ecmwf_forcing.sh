@@ -17,6 +17,8 @@
 
 set -e                                    # stop if a step fails
 
+umask 002   # new files/folders group-writable, so colleagues can update them
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # The window comes from bash_scripts/window.conf. An optional first argument

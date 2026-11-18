@@ -54,11 +54,13 @@ fi
 _win_is_int() { [[ "$1" =~ ^-?[0-9]+$ ]]; }
 
 # A -b/-f override on the command line wins and means a rolling forecast window
+WIN_SOURCE="$WINDOW_CONF"
 if [[ -n "${WIN_BACK:-}" || -n "${WIN_FWD:-}" ]]; then
     [[ -n "${WIN_BACK:-}" ]] && NDAYS_BACK="$WIN_BACK"
     [[ -n "${WIN_FWD:-}"  ]] && NDAYS_FWD="$WIN_FWD"
     START_DATE=""
     END_DATE=""
+    WIN_SOURCE="the command line (-b/-f/-s)"
 fi
 
 _win_today=$(date -d "$(date +%F)" +%s)
@@ -109,6 +111,6 @@ window_describe() {
         echo "fixed window: ${WIN_START} 00:00 to ${WIN_END} 00:00 (dates set, not counted from today)"
     else
         echo "forecast window: ${WIN_START} 00:00 to ${WIN_END} 00:00" \
-             "(${WIN_BACK_DAYS} day(s) back, ${WIN_FWD_DAYS} forward; from ${WINDOW_CONF})"
+             "(${WIN_BACK_DAYS} day(s) back, ${WIN_FWD_DAYS} forward; from ${WIN_SOURCE})"
     fi
 }

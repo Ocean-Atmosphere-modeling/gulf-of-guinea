@@ -57,16 +57,18 @@ INFILE_GLOB = f'ecmwf_{MODEL}_{RESOL}_GulfOfGuinea_*.nc'
 print(f'reading {MODEL} {RESOL} runs ({INFILE_GLOB})')
 
 
-def frc_filename(start):
-    """Name of the forcing file for a window starting on `start`.
+def frc_filename(start, end):
+    """Name of the forcing file for a window from `start` to `end`.
 
     Tagged with the model and grid so the 0.25 deg and 0.1 deg products can sit
-    side by side in blk/. make_roms_in.py builds the same name from the same
-    two settings, and falls back to the older untagged
-    GulfOfGuinea_frc_IFS_bulkflux_<START>.nc for files written before the tag
+    side by side in blk/, and with both dates so two windows that share a start
+    date (a spin-up run and a forecast cycle, say) do not overwrite each
+    other's file. make_roms_in.py builds the same name from the same settings,
+    and falls back to the older names for files written before the tags
     existed.
     """
-    return f'GulfOfGuinea_frc_{MODEL.upper()}_{RESOL}_bulkflux_{start:%Y%m%d}.nc'
+    return (f'GulfOfGuinea_frc_{MODEL.upper()}_{RESOL}_bulkflux_'
+            f'{start:%Y%m%d}_{end:%Y%m%d}.nc')
 
 # Optional: existing forcing file whose 1-D lon/lat define the target grid
 REF_FRC_FILE = None
@@ -301,7 +303,7 @@ def main(argv):
     if REF_FRC_FILE:
         ds = regrid_to_reference(ds)
     check_covers_roms_grid(ds)
-    fname = os.path.join(outdir, frc_filename(tstart))
+    fname = os.path.join(outdir, frc_filename(tstart, tend))
     write_forcing(ds, fname)
     print('Check with:  ncdump -h', fname)
 

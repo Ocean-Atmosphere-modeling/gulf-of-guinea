@@ -28,6 +28,8 @@
 
 set -e                                    # stop if a step fails
 
+umask 002   # new files/folders group-writable, so colleagues can update them
+
 # Repo root. Slurm copies a submitted script to its spool directory, so
 # BASH_SOURCE is not reliable here: try every sensible candidate and keep the
 # first one that really is a checkout (python/run_window.py is the marker).

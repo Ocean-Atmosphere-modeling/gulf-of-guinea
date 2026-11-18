@@ -23,9 +23,12 @@
 
 set -euo pipefail
 
+umask 002   # new files/folders group-writable, so Becca and Sean can update them
+
 : "${START_DATE:?START_DATE not set (submit with bash_scripts/run_forecast_cycle.sh)}"
 : "${END_DATE:?END_DATE not set}"
 export START_DATE END_DATE
+export START_MODE=${START_MODE:-auto}   # auto | hot | cold, read by make_roms_in.py
 
 # Every python script reads this window through python/run_window.py, so the
 # fixed dates are passed straight through - no conversion to day counts, and
