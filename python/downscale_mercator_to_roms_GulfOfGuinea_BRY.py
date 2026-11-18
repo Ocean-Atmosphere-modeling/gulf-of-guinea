@@ -41,6 +41,7 @@ lonmax=-38.0
 #   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
 #   hindcast: START_DATE / END_DATE
 from run_window import get_window, reference_time
+from site_paths import DOWNLOADS, INP_BRY, WEIGHTS_BRY, GRID_FILE
 start_date, tend, mode = get_window()
 print(f'{mode} window: {start_date} to {tend}')
 
@@ -54,23 +55,23 @@ rtime=np.datetime64(reftime.date())
 #Donor inputfiles
 #atadir='/home/om/cron/ECCOFS_OBS/MERCATOR/data/raw/'
 #egrid_coef_file='/home/om/cron/ECCOFS_OBS/MERCATOR/data/mercator_bdry_9999.nc'
-datadir='/projects/f_omg_1/moa/africa/data/downloads/'
+datadir=DOWNLOADS
 
 
 
 # Output directory for the boundary file
-outdir='/projects/f_omg_1/moa/africa/inp/bry/'   # <-- set to your path
+outdir=INP_BRY
 os.makedirs(outdir, exist_ok=True)
 
 # Regridding weights (one file per boundary; '9999' is replaced by EAST/WEST/NORTH/SOUTH)
 # Kept in data/bry so the existing weights for this grid are reused
-weightdir='/projects/f_omg_1/moa/africa/data/bry/'
+weightdir=WEIGHTS_BRY
 os.makedirs(weightdir, exist_ok=True)
 regrid_coef_file=os.path.join(weightdir,'regrid_mercator_bry_9999.nc')
 
 #Receiver Grid Info
 #1grdfile='/home/om/cron/ECCOFS_OBS/MERCATOR/work/grid_eccofs_3km_08_b7.nc' # can be a thredds url
-L1grdfile='/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
+L1grdfile=GRID_FILE
 L1theta_s=7.0 #how close the levels are near the surface
 L1theta_b=2.0 #how close the levels are near the bottom
 L1Tcline=250.0 #total number of levels you will have

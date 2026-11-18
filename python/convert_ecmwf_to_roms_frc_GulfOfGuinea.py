@@ -37,17 +37,41 @@ import netCDF4 as nc
 # USER SETTINGS ---------------------------------------------------------
 
 
-indir = '/projects/f_omg_1/moa/africa/data/downloads/'
-outdir = '/projects/f_omg_1/moa/africa/data/blk/'
+from site_paths import DOWNLOADS, BLK, GRID_FILE
+indir = DOWNLOADS
+outdir = BLK
 
-# Same time-window convention as the download script
-ndays_back = int(os.environ.get('NDAYS_BACK', 3))
-ndays_fwd = int(os.environ.get('NDAYS_FWD', 2))
+# Time window: one shared definition (bash_scripts/window.conf, or
+# NDAYS_BACK/NDAYS_FWD or START_DATE/END_DATE in the environment)
+from run_window import get_window, setting
+tstart, tend, window_mode = get_window()
+print(f'{window_mode} window: {tstart} to {tend}')
+
+# Which downloaded runs to read: the same model and grid the download step
+# used (bash_scripts/window.conf, or ECMWF_MODEL/ECMWF_RESOL in the
+# environment). Keeping these in step matters - the downloads folder can hold
+# more than one grid, and mixing them would stitch together different grids.
+MODEL = setting('ECMWF_MODEL', 'ifs')
+RESOL = setting('ECMWF_RESOL', '0p25')
+INFILE_GLOB = f'ecmwf_{MODEL}_{RESOL}_GulfOfGuinea_*.nc'
+print(f'reading {MODEL} {RESOL} runs ({INFILE_GLOB})')
+
+
+def frc_filename(start):
+    """Name of the forcing file for a window starting on `start`.
+
+    Tagged with the model and grid so the 0.25 deg and 0.1 deg products can sit
+    side by side in blk/. make_roms_in.py builds the same name from the same
+    two settings, and falls back to the older untagged
+    GulfOfGuinea_frc_IFS_bulkflux_<START>.nc for files written before the tag
+    existed.
+    """
+    return f'GulfOfGuinea_frc_{MODEL.upper()}_{RESOL}_bulkflux_{start:%Y%m%d}.nc'
 
 # Optional: existing forcing file whose 1-D lon/lat define the target grid
 REF_FRC_FILE = None
 # Optional: ROMS grid file, only used to warn if the forcing does not cover it
-ROMS_GRID_FILE = '/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
+ROMS_GRID_FILE = GRID_FILE
 
 # Variable used for Pair (the download script fetches msl, mean sea-level pressure)
 PAIR_VAR = 'msl'
@@ -55,8 +79,6 @@ PAIR_VAR = 'msl'
 NC_FORMAT = 'NETCDF3_64BIT_OFFSET'   # or 'NETCDF4'
 
 # Time reference: first of the year of the run start (as in the bry script)
-tstart = date.today() - timedelta(days=ndays_back)
-tend = date.today() + timedelta(days=ndays_fwd)
 REFTIME = datetime(tstart.year, 1, 1)
 
 # END USER SETTINGS -----------------------------------------------------
@@ -125,9 +147,11 @@ def process_run(fname):
 
 
 def build_dataset():
-    files = sorted(glob.glob(os.path.join(indir, 'ecmwf_ifs_0p25_GulfOfGuinea_*.nc')))
+    files = sorted(glob.glob(os.path.join(indir, INFILE_GLOB)))
     if not files:
-        raise FileNotFoundError(f'No input files found in {indir}')
+        raise FileNotFoundError(
+            f'No input files matching {INFILE_GLOB} in {indir}. Run the '
+            f'download step with the same ECMWF_MODEL/ECMWF_RESOL first.')
     print(f'Reading {len(files)} run files')
 
     fields = {v[0]: [] for v in VARS}
@@ -277,8 +301,7 @@ def main(argv):
     if REF_FRC_FILE:
         ds = regrid_to_reference(ds)
     check_covers_roms_grid(ds)
-    fname = os.path.join(
-        outdir, f'GulfOfGuinea_frc_IFS_bulkflux_{tstart:%Y%m%d}.nc')
+    fname = os.path.join(outdir, frc_filename(tstart))
     write_forcing(ds, fname)
     print('Check with:  ncdump -h', fname)
 

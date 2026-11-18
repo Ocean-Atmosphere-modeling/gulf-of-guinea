@@ -7,6 +7,9 @@ hindcast) from the base file run/roms_gulfofguinea.in, filling in the
 settings that change each cycle:
 
   TIME_REF, DSTART, NTIMES                  from the time window
+  (FRCNAME follows ECMWF_MODEL/ECMWF_RESOL, so the .in points at the
+   forcing for the grid you ran the frc step at; ifs/0p25 falls back to the
+   older untagged name when no tagged file exists)
   ININAME, BRYNAME, CLMNAME (1 per day),    the input files made for this
   FRCNAME/NFFILES, SSFNAME                  window by the pre-processing scripts
   RSTNAME, HISNAME, QCKNAME, AVGNAME,       per-cycle output folder and names
@@ -39,13 +42,42 @@ import cftime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# The ECMWF model and grid the frc step used, so FRCNAME points at the
+# matching forcing file (bash_scripts/window.conf, or ECMWF_MODEL/ECMWF_RESOL
+# in the environment).
+from run_window import setting
+from site_paths import INP, BLK, OUT_FORECAST, OUTPUT_SUFFIX
+ECMWF_MODEL = setting('ECMWF_MODEL', 'ifs')
+ECMWF_RESOL = setting('ECMWF_RESOL', '0p25')
+
 # USER SETTINGS -------------------------------------------------------------
 base_in = os.path.join(HERE, '..', 'run', 'roms_gulfofguinea.in')
 run_dir = os.path.join(HERE, '..', 'run')        # where the new .in is written
 
-inp = '/projects/f_omg_1/moa/africa/inp/'
-blk = '/projects/f_omg_1/moa/africa/data/blk/'
-out_root = '/projects/f_omg_1/moa/africa/out/forecast/'   # one folder per cycle
+inp = INP
+blk = BLK
+out_root = OUT_FORECAST
+
+def frc_name(S):
+    """Forcing file for a window starting on S.
+
+    convert_ecmwf_to_roms_frc_GulfOfGuinea.py tags the name with the model and
+    grid; files written before that tag existed are called
+    GulfOfGuinea_frc_IFS_bulkflux_<START>.nc, so fall back to that when the
+    tagged file is absent.
+    """
+    tagged = f'GulfOfGuinea_frc_{ECMWF_MODEL.upper()}_{ECMWF_RESOL}_bulkflux_{S:%Y%m%d}.nc'
+    legacy = f'GulfOfGuinea_frc_IFS_bulkflux_{S:%Y%m%d}.nc'
+    # Only ifs at 0.25 deg may fall back: every untagged file was written by
+    # the older code, which produced nothing else. Falling back for another
+    # grid would quietly hand ROMS a 0.25 deg forcing.
+    if ((ECMWF_MODEL, ECMWF_RESOL) == ('ifs', '0p25')
+            and not os.path.exists(blk + tagged)
+            and os.path.exists(blk + legacy)):
+        print(f'  forcing: {tagged} not found, using untagged {legacy}')
+        return legacy
+    return tagged
+
 
 # Input file names for a window starting on S (date) and ending on E
 def input_files(S, E):
@@ -54,7 +86,7 @@ def input_files(S, E):
         'ININAME': inp + f'ini/ini_gulfofguinea_Mercator_{S:%Y%m%d}.nc',
         'BRYNAME': inp + f'bry/bry_gulfofguinea_Mercator_{S:%Y%m%d}.nc',
         'CLMNAME': [inp + f'clm/clm_gulfofguinea_Mercator_{d:%Y_%m_%d}.nc' for d in days],
-        'FRCNAME': blk + f'GulfOfGuinea_frc_IFS_bulkflux_{S:%Y%m%d}.nc',
+        'FRCNAME': blk + frc_name(S),
         'SSFNAME': inp + f'riv/riv_gulfofguinea_{S:%Y%m%d}_{E:%Y%m%d}_v2.nc',
     }
 
@@ -172,7 +204,10 @@ def main():
     ntimes = int(round(ndays * 86400 / dt))
 
     files = input_files(S, E)
-    outdir = os.path.join(out_root, f'{S:%Y%m%d}')
+    # OUTPUT_SUFFIX (bash_scripts/site.conf) keeps two people who run the same
+    # start date from writing into the same folder; the file names inside are
+    # unchanged, so anything that reads them still works.
+    outdir = os.path.join(out_root, f'{S:%Y%m%d}{OUTPUT_SUFFIX}')
     tag = f'gog_{S:%Y%m%d}'
 
     # Time: model time zero = 00:00 on the start day

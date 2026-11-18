@@ -17,33 +17,44 @@
 #     riv       GloFAS river forcing (last GloFAS day persisted over the forecast)
 #     inp       write the ROMS .in file for this window and check all inputs
 #
-# The window is passed to every python script through the environment
-# variables NDAYS_BACK and NDAYS_FWD, so they can never disagree.
+# The window is defined ONCE in bash_scripts/window.conf and passed to every
+# python script through the environment (NDAYS_BACK/NDAYS_FWD, or
+# START_DATE/END_DATE for a hindcast), so they can never disagree. The ECMWF
+# model and grid (ECMWF_MODEL/ECMWF_RESOL) travel the same way, so the metdl
+# and frc steps always use the same files.
 #
 # Usage:
-#   ./run_gulfofguinea_all.sh [-b DAYS_BACK] [-f DAYS_FWD] [-s STEPS] [-h]
+#   ./run_gulfofguinea_all.sh [-b DAYS_BACK] [-f DAYS_FWD] [-s STEPS]
+#                             [-r RESOL] [-m MODEL] [-h]
 #
-#   -b  days of past data before today      (default: 3)
-#   -f  days of forecast after today        (default: 2, max 5 when met steps run)
+#   -b  days of past data before today      (default: from window.conf)
+#   -f  days of forecast after today        (default: from window.conf;
+#                                            max MAX_DAYS_FWD_MET when met steps run)
 #   -s  comma-separated steps to run        (default: all)
 #       step names: download,bry,clm,ini,metdl,frc,riv,inp
 #       shortcuts : ocean = download,bry,clm,ini
 #                   met   = metdl,frc
 #                   all   = everything (ocean, met, riv, inp)
 #       Steps always run in the order listed above, whatever order you give.
+#   -r  ECMWF grid spacing for metdl/frc     (default: from window.conf)
+#       0p25 = 0.25 deg, published from 2024-02-29
+#       0p1  = 0.1 deg, published from 2026-10-21, ifs only, ~4.6x the download
+#   -m  ECMWF model for metdl/frc            (default: from window.conf)
+#       ifs | aifs-single | aifs-ens  (0p1 exists for ifs only)
 #   -h  show this help
 #
 # Examples:
-#   ./run_gulfofguinea_all.sh                       # everything, 3 back, 2 fwd
+#   ./run_gulfofguinea_all.sh                       # everything, window.conf window
 #   ./run_gulfofguinea_all.sh -b 2 -f 5             # everything, 2 back, 5 fwd
 #   ./run_gulfofguinea_all.sh -s met                # only the atmospheric forcing
 #   ./run_gulfofguinea_all.sh -s ocean              # only the ocean files
 #   ./run_gulfofguinea_all.sh -s bry,ini,frc        # pick individual steps
+#   ./run_gulfofguinea_all.sh -s met -r 0p1         # atmosphere at 0.1 deg
 #
-# Note: the ECMWF open data server keeps only a few days of history, so large
-# values of -b will fail in the metdl step unless SOURCE is set to 'aws',
-# 'google' or 'azure' in the ECMWF download script. If you need a long window
-# for the ocean files only, run the ocean and met steps separately.
+# Note: the real-time ECMWF server keeps only the last ~4 days, so with large
+# values of -b the metdl step takes the older runs from the cloud mirror
+# instead (SOURCE = 'auto' in the ECMWF download script). The mirror holds
+# 0.25 deg open data from 2024-02-29 onward; for anything earlier use ERA5.
 
 set -euo pipefail
 
@@ -64,7 +75,9 @@ INP_PY="make_roms_in.py"
 
 PYTHON="${PYTHON:-python}"
 
-# Optional: conda environment to activate (leave empty to skip)
+# Conda environment: from bash_scripts/site.conf unless already set
+# shellcheck disable=SC1091
+source "$(cd "${SCRIPT_DIR}/../bash_scripts" && pwd)/site_env.sh"
 CONDA_ENV="${CONDA_ENV:-guinea2}"
 CONDA_SH="${CONDA_SH:-$HOME/miniforge3/etc/profile.d/conda.sh}"
 
@@ -74,27 +87,39 @@ LOG_ROOT="${SCRIPT_DIR}/logs"
 # ----------------------------------------------------------------------------
 # Defaults and argument parsing
 # ----------------------------------------------------------------------------
-DAYS_BACK=3
-DAYS_FWD=2
 STEPS="all"
-MAX_DAYS_FWD_MET=5      # ECMWF open data goes to 144 h: (fwd+1)*24 <= 144
 
 usage() { sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 's/^# \{0,1\}//'; }
 
-while getopts ":b:f:s:h" opt; do
+while getopts ":b:f:s:r:m:h" opt; do
     case "$opt" in
-        b) DAYS_BACK="$OPTARG" ;;
-        f) DAYS_FWD="$OPTARG" ;;
+        b) WIN_BACK="$OPTARG" ;;
+        f) WIN_FWD="$OPTARG" ;;
         s) STEPS="$OPTARG" ;;
+        r) ECMWF_RESOL="$OPTARG" ;;
+        m) ECMWF_MODEL="$OPTARG" ;;
         h) usage; exit 0 ;;
         :) echo "ERROR: option -$OPTARG needs a value" >&2; exit 1 ;;
         \?) echo "ERROR: unknown option -$OPTARG" >&2; usage; exit 1 ;;
     esac
 done
 
-is_nonneg_int() { [[ "$1" =~ ^[0-9]+$ ]]; }
-if ! is_nonneg_int "$DAYS_BACK" || ! is_nonneg_int "$DAYS_FWD"; then
-    echo "ERROR: -b and -f must be non-negative integers (got b='$DAYS_BACK', f='$DAYS_FWD')" >&2
+# The window: from bash_scripts/window.conf, unless -b/-f were given. Sets
+# WIN_START, WIN_END, WIN_BACK_DAYS, WIN_FWD_DAYS, MAX_DAYS_FWD_MET and exports
+# NDAYS_BACK/NDAYS_FWD (or START_DATE/END_DATE) for the python scripts.
+# shellcheck disable=SC1091
+source "$(cd "${SCRIPT_DIR}/../bash_scripts" && pwd)/window_env.sh"
+
+case "$ECMWF_RESOL" in
+    0p25|0p1) ;;
+    *) echo "ERROR: -r must be 0p25 or 0p1 (got '$ECMWF_RESOL')" >&2; exit 1 ;;
+esac
+case "$ECMWF_MODEL" in
+    ifs|aifs-single|aifs-ens) ;;
+    *) echo "ERROR: -m must be ifs, aifs-single or aifs-ens (got '$ECMWF_MODEL')" >&2; exit 1 ;;
+esac
+if [[ "$ECMWF_RESOL" == 0p1 && "$ECMWF_MODEL" != ifs ]]; then
+    echo "ERROR: 0.1 deg open data exist for model ifs only (got -m $ECMWF_MODEL)" >&2
     exit 1
 fi
 
@@ -114,15 +139,11 @@ done
 STEPS="${EXPANDED#,}"
 want() { [[ ",${STEPS}," == *",$1,"* ]]; }
 
-if { want metdl || want frc; } && (( DAYS_FWD > MAX_DAYS_FWD_MET )); then
+if { want metdl || want frc; } && (( WIN_FWD_DAYS > MAX_DAYS_FWD_MET )); then
     echo "ERROR: -f must be <= ${MAX_DAYS_FWD_MET} when metdl/frc run (ECMWF open data goes to 144 h)" >&2
     echo "       Use '-s ocean' for a longer forecast window on the ocean files only." >&2
     exit 1
 fi
-
-# The python scripts read these (see the os.environ lines in each script)
-export NDAYS_BACK="$DAYS_BACK"
-export NDAYS_FWD="$DAYS_FWD"
 
 # ----------------------------------------------------------------------------
 # Environment and logging
@@ -169,8 +190,9 @@ run_step() {
 # ----------------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------------
-log "Time window: ${DAYS_BACK} day(s) back, ${DAYS_FWD} day(s) forward (relative to $(date +%Y-%m-%d))"
+log "Time $(window_describe)"
 log "Steps: ${STEPS}"
+{ want metdl || want frc; } && log "$(ecmwf_describe)"
 log "Logs:  ${LOG_DIR}"
 
 # Ocean

@@ -4,8 +4,9 @@
 # Run the Mercator download first (on the login node), then submit from the
 # repo's python/ directory:
 #
-# For example: cd /projectsp/f_omg_1/cbenton/gulf-of-guinea/python
+# For example: cd /path/to/gulf-of-guinea/python
 # Command to run:   sbatch ../bash_scripts/job_downscale.sh
+# The repo is found from the directory you submit from, so no path is hardcoded.
 #
 # Scripts needed are the following
 #  downscale_mercator_to_roms_GulfOfGuinea_INI.py
@@ -27,12 +28,40 @@
 
 set -e                                    # stop if a step fails
 
+# Repo root. Slurm copies a submitted script to its spool directory, so
+# BASH_SOURCE is not reliable here: try every sensible candidate and keep the
+# first one that really is a checkout (python/run_window.py is the marker).
+find_repo_root() {
+    local c self
+    local -a cands=()
+    [[ -n "${REPO:-}" ]] && cands+=("$REPO")
+    if [[ -n "${SLURM_JOB_ID:-}" ]] && command -v scontrol >/dev/null 2>&1; then
+        self=$(scontrol show job "$SLURM_JOB_ID" --oneliner 2>/dev/null \
+               | sed -n 's/.*Command=\([^ ]*\).*/\1/p')
+        [[ -n "$self" ]] && cands+=("$(dirname "$(dirname "$self")")")
+    fi
+    [[ -n "${SLURM_SUBMIT_DIR:-}" ]] && cands+=("$SLURM_SUBMIT_DIR" "$(dirname "$SLURM_SUBMIT_DIR")")
+    cands+=("$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)")
+    for c in "${cands[@]}"; do
+        [[ -n "$c" && -f "$c/python/run_window.py" ]] && { (cd "$c" && pwd); return 0; }
+    done
+    return 1
+}
+REPO=$(find_repo_root) || {
+    echo "ERROR: cannot find the gulf-of-guinea checkout. Submit from the repo" >&2
+    echo "       (or its python/ directory), or sbatch --export=ALL,REPO=/path/to/repo" >&2
+    exit 1; }
+
 # Python environment: May have to change depending on your setup
-source ~/miniforge3/etc/profile.d/conda.sh
-conda activate guinea2
+# shellcheck disable=SC1091
+source "${REPO}/bash_scripts/site_env.sh"
+# shellcheck disable=SC1090
+source "${CONDA_SH:-$HOME/miniforge3/etc/profile.d/conda.sh}"
+conda activate "${CONDA_ENV:-guinea2}"
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
-cd /projectsp/f_omg_1/cbenton/gulf-of-guinea/python   # romsutil.py lives here
+echo "Repo: ${REPO}"
+cd "${REPO}/python"                       # romsutil.py lives here
 
 echo "=== INI  $(date)"
 python -u downscale_mercator_to_roms_GulfOfGuinea_INI.py

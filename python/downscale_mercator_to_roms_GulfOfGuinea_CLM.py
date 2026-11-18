@@ -61,6 +61,7 @@ pc = cartopy.crs.PlateCarree()
 #   hindcast: START_DATE / END_DATE
 # One CLM file is made for each day in the window.
 from run_window import get_window, reference_time
+from site_paths import DOWNLOADS, INP_CLM, WEIGHTS_CLM, GRID_FILE
 start_date, tend, mode = get_window()
 print(f'{mode} window: {start_date} to {tend}')
 
@@ -74,14 +75,14 @@ date_times = pd.date_range(start_date,tend)   # inclusive of both ends
 #Donor grid Info
 
 #Donor inputfiles
-datadir='/projects/f_omg_1/moa/africa/data/downloads/'
+datadir=DOWNLOADS
 
 # Output directory for the daily climatology files
-outdir='/projects/f_omg_1/moa/africa/inp/clm/'   # <-- set to your path
+outdir=INP_CLM
 os.makedirs(outdir, exist_ok=True)
 
 # Regridding weights kept in data/clm so the existing weights for this grid are reused
-weightdir='/projects/f_omg_1/moa/africa/data/clm/'
+weightdir=WEIGHTS_CLM
 os.makedirs(weightdir, exist_ok=True)
 regrid_coef_file=os.path.join(weightdir,'regrid_mercator_clm.nc')
 
@@ -91,7 +92,7 @@ regrid_coef_file=os.path.join(weightdir,'regrid_mercator_clm.nc')
 # Output/receiver ROMS Grid 
 
 # roms gridfile 
-L1grdfile='/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
+L1grdfile=GRID_FILE
 
 # roms s-coordinate parameters
 L1theta_s=7.0
