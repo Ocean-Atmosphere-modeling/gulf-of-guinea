@@ -31,7 +31,8 @@ import os
 import re
 import sys
 import argparse
-from datetime import datetime, timedelta
+import glob
+from datetime import date, datetime, timedelta
 
 import numpy as np
 import netCDF4 as nc
@@ -54,12 +55,29 @@ def input_files(S, E):
         'ININAME': inp + f'ini/ini_gulfofguinea_Mercator_{S:%Y%m%d}.nc',
         'BRYNAME': inp + f'bry/bry_gulfofguinea_Mercator_{S:%Y%m%d}.nc',
         'CLMNAME': [inp + f'clm/clm_gulfofguinea_Mercator_{d:%Y_%m_%d}.nc' for d in days],
-        'FRCNAME': blk + f'GulfOfGuinea_frc_IFS_bulkflux_{S:%Y%m%d}.nc',
+        'FRCNAME': blk + f'GulfOfGuinea_frc_IFS_bulkflux_{S:%Y%m%d}_{E:%Y%m%d}.nc',
         'SSFNAME': inp + f'riv/riv_gulfofguinea_{S:%Y%m%d}_{E:%Y%m%d}_v2.nc',
     }
 
 OUTPUT_KEYS = {'RSTNAME': 'rst', 'HISNAME': 'his', 'QCKNAME': 'qck',
                'AVGNAME': 'avg', 'DIANAME': 'dia'}
+
+# One fixed model clock for every run (spin-up and all forecast cycles), so a
+# cycle can start from a history snapshot written by an earlier run.
+TIME_REF = date(2026, 1, 1)
+
+# How a run starts (--start-mode, or START_MODE in the environment):
+#   auto  hot start if an earlier run saved a snapshot at the start time,
+#         otherwise cold start (default)
+#   hot   hot start only; error if no snapshot is found
+#   cold  cold start from the Mercator INI file
+#
+# Cold start: DSTART = run start, so RAMP_TIDES ramps the tides up from zero
+#   (tanh: 76% after 1 day, 96% after 2, 99.5% after 3).
+# Hot start:  DSTART = TIME_REF, months before the start, so the tides are at
+#   full strength (the ramp only acts in the first days after DSTART). ROMS
+#   numbers output files by time step counted from DSTART, so hot-start file
+#   numbers are the day of the year, e.g. his_gog_20261116_0320.nc = Nov 16.
 # END USER SETTINGS ---------------------------------------------------------
 
 
@@ -95,6 +113,39 @@ def set_entry(lines, key, value, comment=''):
 def get_value(lines, key):
     i0, _ = find_entry(lines, key)
     return lines[i0].split('!')[0].split('=')[-1].strip()
+
+
+# --- hot start --------------------------------------------------------------
+def find_hot_start(S):
+    """Newest history snapshot at exactly 00:00 on S, written by an earlier run
+    on the fixed TIME_REF clock (runs made before the fixed clock, e.g. the
+    early cold-start cycles, are not used). Returns the file path or None."""
+    want = datetime(S.year, S.month, S.day)
+    ref = f'seconds since {TIME_REF:%Y-%m-%d}'
+    found = []
+    for f in glob.glob(os.path.join(out_root, '*', 'his_*.nc')):
+        run_start = os.path.basename(os.path.dirname(f))
+        if run_start >= f'{S:%Y%m%d}':        # only runs that started before S
+            continue
+        try:
+            with nc.Dataset(f) as d:
+                v = d['ocean_time']
+                if not v.units.startswith(ref) or v.shape[0] < 1:
+                    continue
+                t = cftime.num2date(v[:], v.units)
+        except Exception:
+            continue                          # incomplete or unreadable file
+        for k, x in enumerate(t):
+            if datetime(x.year, x.month, x.day, x.hour, x.minute) == want:
+                found.append((run_start, f, k))
+    if not found:
+        return None
+    found.sort()                              # newest run that reached S wins
+    run_start, f, k = found[-1]
+    if k != 0:                                # ROMS reads record 1 of ININAME
+        print(f'  skipping {f}: snapshot at {S} is record {k + 1}, not 1')
+        return None
+    return f
 
 
 # --- input checks ----------------------------------------------------------
@@ -151,6 +202,10 @@ def main():
     p.add_argument('--base', default=base_in, help='base ROMS .in file')
     p.add_argument('--out', help='output .in file (default run/roms_gulfofguinea_<start>.in)')
     p.add_argument('--no-check', action='store_true', help='skip the input file checks')
+    p.add_argument('--start-mode', choices=['auto', 'hot', 'cold'],
+                   default=os.environ.get('START_MODE', 'auto'),
+                   help='auto (default): hot start if an earlier snapshot exists; '
+                        'hot: require one; cold: start from the Mercator INI')
     a = p.parse_args()
 
     if a.start and a.end:
@@ -175,9 +230,24 @@ def main():
     outdir = os.path.join(out_root, f'{S:%Y%m%d}')
     tag = f'gog_{S:%Y%m%d}'
 
-    # Time: model time zero = 00:00 on the start day
-    set_entry(lines, 'TIME_REF', f'{S:%Y%m%d}.0d0', 'yyyymmdd.dd (run start)')
-    set_entry(lines, 'DSTART', '0.0d0', 'days')
+    # Hot or cold start
+    hot = None if a.start_mode == 'cold' else find_hot_start(S)
+    if a.start_mode == 'hot' and hot is None:
+        raise SystemExit(f'--start-mode hot: no earlier snapshot at {S} 00:00 in {out_root}')
+    if hot:
+        files['ININAME'] = hot
+        dstart = 0.0                              # = TIME_REF: no tide ramp
+        how = f'HOT start from {hot}'
+    else:
+        dstart = float((S - TIME_REF).days)       # = run start: tides ramp up
+        how = 'COLD start from the Mercator INI (tides ramped up over ~3 days)'
+        if a.start_mode == 'auto':
+            how += f'; no earlier snapshot at {S} 00:00 was found'
+
+    # Time: one fixed clock (TIME_REF) for all runs
+    set_entry(lines, 'TIME_REF', f'{TIME_REF:%Y%m%d}.0d0', 'yyyymmdd.dd (fixed for all runs)')
+    set_entry(lines, 'DSTART', f'{dstart:.1f}d0',
+              'days since TIME_REF; = run start for a cold start (ramps tides)')
     set_entry(lines, 'NTIMES', str(ntimes), f'{ndays} days: {S} 00:00 to {E} 00:00')
     # Inputs
     set_entry(lines, 'ININAME', files['ININAME'])
@@ -197,6 +267,7 @@ def main():
     os.makedirs(outdir, exist_ok=True)
 
     print(f'{mode} window: {S} to {E} ({ndays} days, NTIMES={ntimes}, DT={dt:g} s)')
+    print(how)
     print(f'Wrote {os.path.normpath(fname)}')
     print(f'Output folder {outdir}')
 

@@ -277,8 +277,10 @@ def main(argv):
     if REF_FRC_FILE:
         ds = regrid_to_reference(ds)
     check_covers_roms_grid(ds)
+    # Named by start AND end date, so windows that share a start date (e.g. a
+    # spin-up run and a forecast cycle) do not overwrite each other's file
     fname = os.path.join(
-        outdir, f'GulfOfGuinea_frc_IFS_bulkflux_{tstart:%Y%m%d}.nc')
+        outdir, f'GulfOfGuinea_frc_IFS_bulkflux_{tstart:%Y%m%d}_{tend:%Y%m%d}.nc')
     write_forcing(ds, fname)
     print('Check with:  ncdump -h', fname)
 
