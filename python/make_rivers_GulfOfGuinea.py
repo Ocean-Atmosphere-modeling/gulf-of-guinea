@@ -43,16 +43,17 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import netCDF4 as nc
+from site_paths import GLOFAS, INP_RIV, GRID_FILE
 
 # USER SETTINGS ---------------------------------------------------------------
 
 # Directory for downloaded GloFAS files and for the output river file
-glofasdir = '/projects/f_omg_1/moa/africa/data/glofas/'
-outdir = '/projects/f_omg_1/moa/africa/inp/riv/'
+glofasdir = GLOFAS
+outdir = INP_RIV
 outname = 'riv_gulfofguinea_{tag}_v2.nc'      # {tag} = year, or start_end
 
 # ROMS grid (only recorded as an attribute)
-grdfile = '/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
+grdfile = GRID_FILE
 N = 50                                        # number of s_rho levels
 
 # GloFAS subset area [North, West, South, East] -- same box as the Mercator

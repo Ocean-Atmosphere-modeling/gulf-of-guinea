@@ -17,3 +17,8 @@ __pycache__/
 # Driver step logs
 logs/
 *.log
+
+# ROMS .in files written for each forecast cycle by python/make_roms_in.py.
+# The template run/roms_gulfofguinea.in IS tracked; these dated copies are
+# rebuilt every run and do not need to be stored.
+run/roms_gulfofguinea_*.in

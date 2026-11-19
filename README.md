@@ -5,11 +5,12 @@
 
 Hydrodynamic forecast modeling using [Regional Ocean Modeling System (ROMS)](https://www.myroms.org/)
 
+**New here? Start with [WORKFLOW.md](WORKFLOW.md)** - accounts, packages, folders, and how to run each step.
+
 ## Toolbox
 Major scripts use Python for accessibility
-- See python/README.md for detailed documentation of required packages and dependencies
+- `environment.yml` creates the conda environment; [WORKFLOW.md](WORKFLOW.md) documents the packages and what each step does
 
 Inputs from Copernicus, ECMWF, TPXO
 
-Default filepaths assume use of the Amarel cluster
-
+Paths are set in `bash_scripts/site.conf`; the defaults assume the Amarel cluster

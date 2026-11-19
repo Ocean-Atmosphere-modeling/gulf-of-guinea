@@ -44,6 +44,7 @@ pc = cartopy.crs.PlateCarree()
 #   forecast: NDAYS_BACK / NDAYS_FWD around today (default 3 back, 2 forward)
 #   hindcast: START_DATE / END_DATE
 from run_window import get_window, reference_time
+from site_paths import DOWNLOADS, INP_INI, WEIGHTS_INI, GRID_FILE
 start_date, tend, mode = get_window()
 
 # File time reference: Jan 1 of the start year (same as BRY, CLM, rivers, forcing)
@@ -60,14 +61,14 @@ print(f'{mode} window: {start_date} to {tend}; initial conditions for {start_dat
 
 
 # Mercator donor input files
-datadir=datadir='/projects/f_omg_1/moa/africa/data/downloads/'
+datadir=DOWNLOADS
 
 # Output directory for the initial conditions file
-outdir='/projects/f_omg_1/moa/africa/inp/ini/'   # <-- set to your path
+outdir=INP_INI
 os.makedirs(outdir, exist_ok=True)
 
 # Regridding weights kept in data/ini (created on the first run, reused after)
-weightdir='/projects/f_omg_1/moa/africa/data/ini/'
+weightdir=WEIGHTS_INI
 os.makedirs(weightdir, exist_ok=True)
 regrid_coef_file=os.path.join(weightdir,'regrid_mercator_ini.nc')
 
@@ -81,7 +82,7 @@ inifile=os.path.join(outdir, f'ini_gulfofguinea_Mercator_{sdate}.nc')
 
 
 # roms gridfile 
-L1grdfile='/projects/f_omg_1/moa/africa/data/imp_files/grd_GulfOfGuinea_4km.nc'
+L1grdfile=GRID_FILE
 
 # roms s-coordinate parameters
 L1theta_s=7.0

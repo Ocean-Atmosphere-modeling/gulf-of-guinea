@@ -1,0 +1,31 @@
+# Conda environment for the Gulf of Guinea ROMS pre-processing scripts.
+#   conda env create -f environment.yml   (or: mamba env create -f environment.yml)
+#   conda activate gulfofguinea
+#
+# cdsapi is deliberately left out: only make_rivers_GulfOfGuinea.py --download
+# needs it. Add it with `pip install cdsapi` if you use that option.
+name: gulfofguinea
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scipy
+  - xarray
+  - dask
+  - netcdf4
+  - xesmf          # regridding (pulls in esmpy)
+  - esmpy
+  - xroms          # ROMS grid helpers used by romsutil.py
+  - cfgrib         # read ECMWF GRIB
+  - eccodes        # GRIB library behind cfgrib
+  - python-eccodes
+  - cartopy        # only used by the plotting helpers
+  - matplotlib
+  - psutil
+  - ipykernel
+  - pip
+  - pip:
+      - copernicusmarine   # Copernicus Marine (CMEMS) client
+      - ecmwf-opendata     # ECMWF IFS open-data client

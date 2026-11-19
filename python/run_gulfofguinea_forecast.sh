@@ -8,19 +8,20 @@
 #   3. build the climatology files (CLM, one per day)
 #   4. build the initial conditions file (INI)
 #
-# The window is passed to every python script through the environment
-# variables NDAYS_BACK and NDAYS_FWD, so they can never disagree.
+# The window is defined ONCE in bash_scripts/window.conf and passed to every
+# python script through the environment (NDAYS_BACK/NDAYS_FWD, or
+# START_DATE/END_DATE for a hindcast), so they can never disagree.
 #
 # Usage:
 #   ./run_gulfofguinea_forecast.sh [-b DAYS_BACK] [-f DAYS_FWD] [-s STEPS] [-h]
 #
-#   -b  days of past data before today      (default: 7)
-#   -f  days of forecast after today        (default: 2)
+#   -b  days of past data before today      (default: from window.conf)
+#   -f  days of forecast after today        (default: from window.conf)
 #   -s  comma-separated steps to run        (default: download,bry,clm,ini)
 #   -h  show this help
 #
 # Examples:
-#   ./run_gulfofguinea_forecast.sh                    # 7 back, 2 forward
+#   ./run_gulfofguinea_forecast.sh                    # window from window.conf
 #   ./run_gulfofguinea_forecast.sh -b 3 -f 5          # 3 back, 5 forward
 #   ./run_gulfofguinea_forecast.sh -b 7 -f 2 -s bry,ini   # skip download and clm
 
@@ -39,9 +40,10 @@ INI_PY="downscale_mercator_to_roms_GulfOfGuinea_INI.py"
 
 PYTHON="${PYTHON:-python}"
 
-# Optional: conda environment to activate (leave empty to skip)
-CONDA_ENV=""            # e.g. "roms-env"
-CONDA_SH=""             # e.g. "$HOME/miniconda3/etc/profile.d/conda.sh"
+# Conda environment: from bash_scripts/site.conf (leave CONDA_ENV empty there
+# to skip activation)
+# shellcheck disable=SC1091
+source "$(cd "${SCRIPT_DIR}/../bash_scripts" && pwd)/site_env.sh"
 
 # Where logs go
 LOG_ROOT="${SCRIPT_DIR}/logs"
@@ -49,16 +51,14 @@ LOG_ROOT="${SCRIPT_DIR}/logs"
 # ----------------------------------------------------------------------------
 # Defaults and argument parsing
 # ----------------------------------------------------------------------------
-DAYS_BACK=7
-DAYS_FWD=2
 STEPS="download,bry,clm,ini"
 
 usage() { sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 's/^# \{0,1\}//'; }
 
 while getopts ":b:f:s:h" opt; do
     case "$opt" in
-        b) DAYS_BACK="$OPTARG" ;;
-        f) DAYS_FWD="$OPTARG" ;;
+        b) WIN_BACK="$OPTARG" ;;
+        f) WIN_FWD="$OPTARG" ;;
         s) STEPS="$OPTARG" ;;
         h) usage; exit 0 ;;
         :) echo "ERROR: option -$OPTARG needs a value" >&2; exit 1 ;;
@@ -66,11 +66,11 @@ while getopts ":b:f:s:h" opt; do
     esac
 done
 
-is_nonneg_int() { [[ "$1" =~ ^[0-9]+$ ]]; }
-if ! is_nonneg_int "$DAYS_BACK" || ! is_nonneg_int "$DAYS_FWD"; then
-    echo "ERROR: -b and -f must be non-negative integers (got b='$DAYS_BACK', f='$DAYS_FWD')" >&2
-    exit 1
-fi
+# The window: from bash_scripts/window.conf, unless -b/-f were given. Sets
+# WIN_START, WIN_END, WIN_BACK_DAYS, WIN_FWD_DAYS and exports the window for
+# the python scripts.
+# shellcheck disable=SC1091
+source "$(cd "${SCRIPT_DIR}/../bash_scripts" && pwd)/window_env.sh"
 
 # Validate step names
 IFS=',' read -r -a STEP_LIST <<< "$STEPS"
@@ -81,10 +81,6 @@ for s in "${STEP_LIST[@]}"; do
     esac
 done
 want() { [[ ",${STEPS}," == *",$1,"* ]]; }
-
-# The python scripts read these (see os.environ lines added to each script)
-export NDAYS_BACK="$DAYS_BACK"
-export NDAYS_FWD="$DAYS_FWD"
 
 # ----------------------------------------------------------------------------
 # Environment and logging
@@ -128,7 +124,7 @@ run_step() {
 # ----------------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------------
-log "Time window: ${DAYS_BACK} day(s) back, ${DAYS_FWD} day(s) forward (relative to $(date +%Y-%m-%d))"
+log "Time $(window_describe)"
 log "Steps: ${STEPS}"
 log "Logs:  ${LOG_DIR}"
 

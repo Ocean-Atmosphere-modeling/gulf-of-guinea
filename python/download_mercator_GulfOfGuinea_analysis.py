@@ -10,10 +10,11 @@ import pandas as pd
 # USER SETTINGS FOR DOWNLOAD --------------------------------------------
 
 # DIRECTORIES WHERE THE DOWNLOADED MERCATOR DATA IS HELD
-outdir='/projects/f_omg_1/moa/africa/data/downloads/'
+from site_paths import DATA, DOWNLOADS, user_tmp
+outdir=DOWNLOADS
 # Per-user temp folder: this script deletes every .nc in tmpdir when it
 # finishes, so a shared folder would let two users delete each other's files
-tmpdir=f'/projects/f_omg_1/moa/africa/data/temp_{os.environ.get("USER","user")}/'
+tmpdir=user_tmp(DATA, 'temp')
 os.makedirs(tmpdir, exist_ok=True)
 
 # GULF OF GUINEA BOUNDING BOX -16.0000   13.5000  -11.0000    8.0000
